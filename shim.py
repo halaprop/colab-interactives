@@ -3,22 +3,31 @@ shim.py -- Colab delivery.
 
 Assembles ONE HTML doc for a Colab cell: a #canvas div, then three
 script tags in order -- D3 (CDN) -> lib/diagram.js -> the app -- and
-displays it. LIB and APP take separate refs so LIB can stay pinned to a
-tag for a lecture while APP floats on main and gets pushed between cells:
+displays it.
 
-    show(lib='v1', app='apps/beach.js')
+    show()
 
-Pass `code=` instead of `app=` to skip GitHub and iterate inline:
+Pass app= to show a different app than APP for one cell, or code=
+instead to skip GitHub and iterate inline:
 
-    show(lib='v1', code=open('apps/beach.js').read())
+    show(app='apps/perceptron.js')
+    show(code=open('apps/beach.js').read())
 """
 
 import time
 from IPython.display import HTML, display
 
-# Fill these in once the repo is on GitHub -- see README.md.
-GITHUB_USER = 'YOUR_GITHUB_USER'
-GITHUB_REPO = 'YOUR_GITHUB_REPO'
+GITHUB_USER = 'halaprop'
+GITHUB_REPO = 'colab-interactives'
+
+# set to 'main' during dev.
+# set to a tag once stable: git tag vN && git push origin vN, then set
+# LIB_VERSION to that tag name.
+LIB_VERSION = 'main'
+
+# repo path to the app show() displays by default. override per call
+# with app= for a notebook that shows more than one.
+APP = 'apps/beach.js'
 
 D3_SRC = 'https://d3js.org/d3.v7.min.js'
 
@@ -30,27 +39,18 @@ def jsdelivr(path, ref, cache_bust=False):
     return url
 
 
-def show(lib='main', app=None, app_ref='main', code=None, height=650, cache_bust=True):
-    """
-    lib:        git ref for lib/diagram.js (pin to a tag for a lecture).
-    app:        repo path to an apps/*.js file, e.g. 'apps/beach.js'.
-    app_ref:    git ref for `app` (defaults to 'main' -- typically floats
-                while `lib` stays pinned).
-    code:       inline JS string; if given, `app`/`app_ref` are ignored
-                and nothing is fetched from GitHub for the app script.
-    height:     canvas height in px. Width always fills the cell.
-    cache_bust: append ?t=<timestamp> to the app URL (irrelevant when
-                using `code`) so a floating ref doesn't serve a stale
-                jsDelivr-cached copy while you're actively editing it.
-    """
+def show(app=None, code=None, app_ref=None, height=650):
     if code is None and app is None:
-        raise ValueError('show() needs either app= or code=')
+        app = APP
 
-    lib_src = jsdelivr('lib/diagram.js', lib)
+    if app_ref is None:
+        app_ref = LIB_VERSION
+
+    lib_src = jsdelivr('lib/diagram.js', LIB_VERSION, cache_bust=(LIB_VERSION == 'main'))
     if code is not None:
         app_tag = f'<script>{code}</script>'
     else:
-        app_src = jsdelivr(app, app_ref, cache_bust=cache_bust)
+        app_src = jsdelivr(app, app_ref, cache_bust=(app_ref == 'main'))
         app_tag = f'<script src="{app_src}"></script>'
 
     html = f'''
