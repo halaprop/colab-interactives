@@ -23,7 +23,14 @@
   const networkEl = document.createElement('div');
   const activationEl = document.createElement('div');
 
-  Object.assign(root.style, { display: 'flex', width: '100%', height: '100%' });
+  // Leave root's own height alone -- the shim (or the harness) already
+  // gave #canvas a definite height, and overwriting it with height:100%
+  // here would make it depend on an ancestor (Colab's iframe body) that
+  // has no guaranteed definite height of its own, collapsing the whole
+  // chain: the network/activation <svg>s would fall back to the
+  // browser's default replaced-element size (~150px) instead of filling
+  // the column.
+  Object.assign(root.style, { display: 'flex', width: '100%' });
   Object.assign(controlsEl.style, { width: '26%', height: '100%', flex: '0 0 auto' });
   Object.assign(networkEl.style, { width: '38%', height: '100%', flex: '0 0 auto' });
   Object.assign(activationEl.style, { width: '36%', height: '100%', flex: '0 0 auto' });
