@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Diagram Harness</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      #canvas {
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="canvas"></div>
+
+    <!-- D3 -> lib/diagram.js -> chosen app, same order + files the Colab
+         shim assembles, so "looks right locally" == "looks right in Colab". -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const app = params.get('app') || 'beach';
+
+      const libScript = document.createElement('script');
+      libScript.src = '/lib/diagram.js';
+      libScript.onload = () => {
+        const appScript = document.createElement('script');
+        appScript.src = `/apps/${app}.js`;
+        document.body.appendChild(appScript);
+      };
+      document.body.appendChild(libScript);
+    </script>
+  </body>
+</html>
