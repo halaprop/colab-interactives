@@ -134,7 +134,7 @@
   const activationPlane = activation.plane({
     xDomain: [-4, 4],
     yDomain: [-1, 4],
-    xLabel: 'weighted sum',
+    xLabel: 'sum of weighted inputs',
     yLabel: 'activation',
     grid: true,
   });
