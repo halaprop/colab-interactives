@@ -71,7 +71,7 @@
   network.node({
     id: 'work',
     x: -5,
-    y: -4,
+    y: -2,
     sizeKey: 'l',
     onChange: (s, self) => {
       self.text = `work: ${s.x2.toFixed(2)}`;
