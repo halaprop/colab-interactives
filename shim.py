@@ -14,6 +14,15 @@ _resolved = {}  # ref -> (sha, resolved_at); avoids re-hitting the GitHub
                 # API on every cell re-run within RESOLVE_TTL seconds.
 RESOLVE_TTL = 30
 
+# some CDNs (e.g. d3js.org) 403 Python's default User-Agent regardless of
+# HTTP method -- a browser's <script src> never hits this, only our own
+# fetch/HEAD checks do, so every request needs a browser-like UA.
+_HEADERS = {'User-Agent': 'Mozilla/5.0'}
+
+
+def _fetch(url, method='GET'):
+    return urllib.request.urlopen(urllib.request.Request(url, method=method, headers=_HEADERS), timeout=5)
+
 
 def resolve_ref(ref):
     # a commit sha is immutable so jsDelivr treats it as always-fresh,
@@ -26,7 +35,7 @@ def resolve_ref(ref):
         return sha
     try:
         url = f'https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/commits/main'
-        sha = json.loads(urllib.request.urlopen(url, timeout=5).read())['sha']
+        sha = json.loads(_fetch(url).read())['sha']
     except Exception:
         return ref  # jsDelivr's own @main cache is a few days stale at worst
     _resolved[ref] = (sha, time.time())
@@ -37,8 +46,7 @@ def show(app, ref=None, height=650):
     base = f'https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{resolve_ref(ref or REF)}'
 
     try:
-        manifest_url = f'{base}/apps/{app}/manifest.json'
-        manifest = json.loads(urllib.request.urlopen(manifest_url, timeout=5).read())
+        manifest = json.loads(_fetch(f'{base}/apps/{app}/manifest.json').read())
     except urllib.error.HTTPError as e:
         if e.code != 404:
             raise  # a real fetch failure, not just "no manifest" -- don't hide it
@@ -50,7 +58,7 @@ def show(app, ref=None, height=650):
 
     for label, src in scripts:
         try:
-            urllib.request.urlopen(urllib.request.Request(src, method='HEAD'), timeout=5)
+            _fetch(src, method='HEAD')
         except urllib.error.HTTPError as e:
             raise FileNotFoundError(f'{label} -> HTTP {e.code} ({src})') from None
 
