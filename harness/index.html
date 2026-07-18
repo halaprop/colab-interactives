@@ -9,30 +9,49 @@
         margin: 0;
         height: 100%;
       }
-      #canvas {
+      #app {
         width: 100vw;
         height: 100vh;
       }
     </style>
   </head>
   <body>
-    <div id="canvas"></div>
+    <div id="app"></div>
 
-    <!-- D3 -> lib/diagram.js -> chosen app, same order + files the Colab
-         shim assembles, so "looks right locally" == "looks right in Colab". -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Reads apps/<name>/manifest.json and loads deps -> entry in order,
+         same logic shim.py uses, so "looks right locally" == "looks right
+         in Colab". -->
     <script>
       const params = new URLSearchParams(location.search);
-      const app = params.get('app') || 'beach';
+      const app = params.get('app') || 'diagram-editor';
 
-      const libScript = document.createElement('script');
-      libScript.src = '/lib/diagram.js';
-      libScript.onload = () => {
-        const appScript = document.createElement('script');
-        appScript.src = `/apps/${app}.js`;
-        document.body.appendChild(appScript);
-      };
-      document.body.appendChild(libScript);
+      function loadScript(src) {
+        return new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.onload = resolve;
+          s.onerror = reject;
+          document.body.appendChild(s);
+        });
+      }
+
+      fetch(`/apps/${app}/manifest.json`)
+        .then((r) => (r.ok ? r.json() : {}))
+        .catch(() => ({}))
+        .then(async (manifest) => {
+          const deps = manifest.deps || [];
+          const entry = manifest.entry || 'index.js';
+
+          for (const dep of deps) {
+            const src = dep.startsWith('http') ? dep : `/${dep}`;
+            await loadScript(src);
+          }
+
+          const entryPath = `apps/${app}/${entry}`;
+          loadScript(`/${entryPath}`).catch(() => {
+            document.getElementById('app').textContent = `error: ${entryPath} not found`;
+          });
+        });
     </script>
   </body>
 </html>

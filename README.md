@@ -1,58 +1,49 @@
 # colab-interactives
 
-D3-based library for interactive network/plot diagrams, delivered into
-Google Colab cells.
+Run JS apps in a Google Colab cell with almost no code in the notebook.
 
-`lib/diagram.js` is a single hand-authored file with no build step — D3 is
-its only runtime dependency, loaded via a script tag. What's in this repo
-is byte-for-byte what runs in Colab.
+ - Paste `bootstrap.py` into your notebook's first cell, filling in `GITHUB_USER`/`GITHUB_REPO`/`REF` for this repo (or your fork).
+ - Every other cell can call `shim.show(app=...)`.
+ - The `app` param refers to a subpath in the apps folder of this repo. It requires an `index.js` file as the entry point, plus an optional `manifest.json` specifying the app's dependencies (and overriding the entry point's filename, if you don't want `index.js`).
+ - App dependencies may be either CDN-hosted libs, or a path within this repo, e.g. `lib/diagram.js`.
+ - The shim will assemble an HTML doc with script tags importing the app's dependencies, and an `#app` div, upon which the DOM can be built.
+ - Everything is fetched from your repo via jsDelivr.
 
-## Dev harness
+## Hello World
 
-```
-npm install
-npm run dev
-```
+`apps/hello/index.js`:
 
-Opens `harness/index.html`, which loads D3 -> `lib/diagram.js` -> an
-`apps/*.js` fixture, in that order — the same order and files the Colab
-shim assembles. Switch fixtures with `?app=<name>` (default: `beach`).
-
-## Colab delivery
-
-Each Colab cell is a call to `shim.show(...)`, which assembles one HTML
-doc — a `#canvas` div, then three script tags in order: D3 (CDN) ->
-`lib/diagram.js` -> the app — and displays it. Both files are served via
-jsDelivr, **not** `raw.githubusercontent.com` (wrong MIME type, won't
-execute):
-
-```
-https://cdn.jsdelivr.net/gh/<user>/<repo>@<ref>/lib/diagram.js
-https://cdn.jsdelivr.net/gh/<user>/<repo>@<ref>/apps/<name>.js
+```js
+(function () {
+  const root = document.querySelector('#app');
+  sayHello(root, 'World');
+})();
 ```
 
-Before using this, fill in `GITHUB_USER`/`GITHUB_REPO` at the top of
-`shim.py` once the repo is pushed to GitHub.
+`apps/hello/manifest.json` -- a made-up dependency, just to show the
+mechanism (it could be a CDN URL instead; here it's a file in this repo):
 
-**In a Colab cell:**
+```json
+{ "deps": ["lib/hello.js"] }
+```
+
+`lib/hello.js`:
+
+```js
+function sayHello(container, name) {
+  const h1 = document.createElement('h1');
+  h1.textContent = `Hello, ${name}!`;
+  container.appendChild(h1);
+}
+```
+
+Push those three files to GitHub. Then, in a Colab notebook: paste
+`bootstrap.py` into cell 1 (with your `GITHUB_USER`/`GITHUB_REPO`/`REF`
+filled in), and in cell 2:
 
 ```python
-import shim
-shim.show(lib='v1', app='apps/beach.js')
+shim.show(app='hello')
 ```
 
-**Pin vs. float.** `lib` and `app` take *separate* git refs on purpose.
-During a lecture, pin `lib` to a tag (`v1`) so the library can't shift
-under you mid-class, while `app` floats on `main` (the default) so you
-can keep pushing fixes to the app file between cells and just re-run the
-cell to pick them up — `show()` cache-busts the app URL by default so you
-never get a stale jsDelivr-cached copy while iterating. Re-run with a new
-`lib=` tag once you cut the next version.
+The cell renders "Hello, World!".
 
-**Skip GitHub entirely** for quick local iteration by passing `code=`
-instead of `app=` — the JS string gets embedded inline rather than
-fetched:
-
-```python
-shim.show(lib='v1', code=open('apps/beach.js').read())
-```

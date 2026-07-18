@@ -1,89 +1,65 @@
-"""
-shim.py -- Colab delivery.
-
-Assembles ONE HTML doc for a Colab cell: a #canvas div, then three
-script tags in order -- D3 (CDN) -> lib/diagram.js -> the app -- and
-displays it.
-
-    show()
-
-Pass app= to show a different app than APP for one cell, or code=
-instead to skip GitHub and iterate inline:
-
-    show(app='apps/perceptron.js')
-    show(code=open('apps/beach.js').read())
-"""
-
 import json
 import time
+import urllib.error
 import urllib.request
 from IPython.display import HTML, display
 
+# defaults, used only if shim is imported without going through
+# bootstrap.py (which overwrites these right after import -- see there).
 GITHUB_USER = 'halaprop'
 GITHUB_REPO = 'colab-interactives'
+REF = 'main'  # or a pinned tag
 
-# set to 'main' during dev.
-# set to a tag once stable: git tag vN && git push origin vN, then set
-# LIB_VERSION to that tag name.
-LIB_VERSION = 'main'
-
-# repo path to the app show() displays by default. override per call
-# with app= for a notebook that shows more than one.
-APP = 'apps/beach.js'
-
-D3_SRC = 'https://d3js.org/d3.v7.min.js'
-
-# jsDelivr caches a branch ref (e.g. @main) for up to 7 days and ignores
-# query-string cache-busting for it. A commit sha is immutable, so
-# jsDelivr always treats it as fresh content instead -- resolving 'main'
-# to its current sha here sidesteps the branch cache entirely. Pinned
-# tags need no resolving, they're already immutable. Resolved shas are
-# cached for RESOLVE_TTL seconds so a burst of re-run cells doesn't
-# re-hit the GitHub API each time.
+_resolved = {}  # ref -> (sha, resolved_at); avoids re-hitting the GitHub
+                # API on every cell re-run within RESOLVE_TTL seconds.
 RESOLVE_TTL = 30
-_resolved = {}
 
 
 def resolve_ref(ref):
+    # a commit sha is immutable so jsDelivr treats it as always-fresh,
+    # unlike @main, which it caches for up to 7 days regardless of query
+    # string -- resolving 'main' to its current sha here sidesteps that.
     if ref != 'main':
         return ref
-    cached = _resolved.get(ref)
-    now = time.time()
-    if cached and now - cached[1] < RESOLVE_TTL:
-        return cached[0]
+    sha, t = _resolved.get(ref, (None, 0))
+    if sha and time.time() - t < RESOLVE_TTL:
+        return sha
     try:
         url = f'https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/commits/main'
-        with urllib.request.urlopen(url, timeout=5) as resp:
-            sha = json.loads(resp.read())['sha']
-        _resolved[ref] = (sha, now)
-        return sha
+        sha = json.loads(urllib.request.urlopen(url, timeout=5).read())['sha']
     except Exception:
-        return ref
+        return ref  # jsDelivr's own @main cache is a few days stale at worst
+    _resolved[ref] = (sha, time.time())
+    return sha
 
 
-def jsdelivr(path, ref):
-    return f'https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{resolve_ref(ref)}/{path}'
+def show(app, ref=None, height=650):
+    base = f'https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{resolve_ref(ref or REF)}'
 
+    try:
+        manifest_url = f'{base}/apps/{app}/manifest.json'
+        manifest = json.loads(urllib.request.urlopen(manifest_url, timeout=5).read())
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise  # a real fetch failure, not just "no manifest" -- don't hide it
+        manifest = {}
 
-def show(app=None, code=None, app_ref=None, height=650):
-    if code is None and app is None:
-        app = APP
+    entry = f'apps/{app}/{manifest.get("entry", "index.js")}'
+    scripts = [(d, d if d.startswith('http') else f'{base}/{d}') for d in manifest.get('deps', [])]
+    scripts.append((entry, f'{base}/{entry}'))
 
-    if app_ref is None:
-        app_ref = LIB_VERSION
+    for label, src in scripts:
+        try:
+            urllib.request.urlopen(urllib.request.Request(src, method='HEAD'), timeout=5)
+        except urllib.error.HTTPError as e:
+            raise FileNotFoundError(f'{label} -> HTTP {e.code} ({src})') from None
 
-    lib_src = jsdelivr('lib/diagram.js', LIB_VERSION)
-    if code is not None:
-        app_tag = f'<script>{code}</script>'
-    else:
-        app_src = jsdelivr(app, app_ref)
-        app_tag = f'<script src="{app_src}"></script>'
+    tags = ''.join(
+        f'<script src="{src}" onerror="'
+        f"document.getElementById('app').textContent='error: {label} not found'"
+        f'"></script>'
+        for label, src in scripts
+    )
 
-    html = f'''
-<style>body{{margin:0}}</style>
-<div id="canvas" style="width:100%;height:{height}px;"></div>
-<script src="{D3_SRC}"></script>
-<script src="{lib_src}"></script>
-{app_tag}
-'''
-    display(HTML(html))
+    display(HTML(f'<style>body{{margin:0}}</style>'
+                  f'<div id="app" style="width:100%;height:{height}px;"></div>{tags}'))

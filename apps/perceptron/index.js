@@ -1,5 +1,5 @@
 /*
- * apps/perceptron.js
+ * apps/perceptron/index.js
  *
  * "Should I go to the beach" as an actual single-neuron perceptron:
  * two input nodes (sunny, work) feed a weighted sum into an output node
@@ -12,19 +12,19 @@
  * app's own DOM/CSS -- the library has no opinion on page layout. The
  * two Diagrams share one state object so a slider drives both at once.
  * The ReLU curve is plain D3 using the activation Plane's own xScale/
- * yScale, not a library primitive (spec.md: point-vs-line math and new
+ * yScale, not a library primitive -- point-vs-line math and new
  * primitives are deliberately deferred until a second use case asks for
- * one -- see the "Restraint" section).
+ * one.
  */
 (function () {
-  const root = document.querySelector('#canvas');
+  const root = document.querySelector('#app');
 
   const controlsEl = document.createElement('div');
   const networkEl = document.createElement('div');
   const activationEl = document.createElement('div');
 
   // Leave root's own height alone -- the shim (or the harness) already
-  // gave #canvas a definite height, and overwriting it with height:100%
+  // gave #app a definite height, and overwriting it with height:100%
   // here would make it depend on an ancestor (Colab's iframe body) that
   // has no guaranteed definite height of its own, collapsing the whole
   // chain: the network/activation <svg>s would fall back to the

@@ -1,8 +1,9 @@
 # Diagram API
 
 Reference for `lib/diagram.js`. For complete working examples, see
-`apps/beach.js` (live construction, `editable()`) and `apps/perceptron.js`
-(reactive, `state`/`onChange`, multiple Diagrams sharing state).
+`apps/diagram-editor/index.js` (live construction, `editable()`) and
+`apps/perceptron/index.js` (reactive, `state`/`onChange`, multiple
+Diagrams sharing state).
 
 Every writable prop below can be changed after creation too, two ways:
 re-call the factory with the same `id` (`g.node({id:'a', x:5})` again —
@@ -35,7 +36,7 @@ one coordinate space.
 
 Example:
 
-    const g = Diagram('#canvas');
+    const g = Diagram('#app');
     g.plane({ xDomain: [-10, 10], yDomain: [-10, 10] });
 
 Example: two Diagrams sharing one state object (see Reactivity)
@@ -113,7 +114,7 @@ Example: two nodes and the edge between them
 - `text` — string, default `''`.
 - `shape` — `'circle' | 'rect' | 'none'`, default `'circle'`.
 - `cls` — `'neutral' | 'go' | 'nogo'`, optional. Hand-authored color
-  convenience; the library never assigns it (see spec.md's "Restraint").
+  convenience; the library never assigns it.
 - `sizeKey`, `fontKey` — `'s' | 'm' | 'l'`, default `'m'`.
 - `textPlacement` — `'above' | 'middle' | 'below'`, default `'below'`.
 - `fill`, `stroke`, `strokeWidth`, `textFill` — explicit color/width
@@ -208,7 +209,7 @@ a coordinate space — so it can drive several Diagrams at once.
 Example:
 
     const state = {};
-    const g = Diagram('#canvas', { state });
+    const g = Diagram('#app', { state });
     const controls = Controls('#controls', state);
     controls.slider({ label: 'x1', min: -2, max: 2, step: 0.1, bind: 'x1', onInput: () => g.render() });
 
