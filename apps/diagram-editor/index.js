@@ -8,16 +8,16 @@
  * No pre-authored nodes/line here on purpose -- g.editable(...) is the
  * whole construction demo.
  */
-(function () {
-  const g = Diagram('#app');
+import { Diagram } from '../../lib/diagram.js';
 
-  g.plane({
-    xDomain: [-10, 10],
-    yDomain: [-10, 10],
-    xLabel: 'x',
-    yLabel: 'y',
-    grid: true,
-  });
+const g = Diagram('#app');
 
-  g.editable();
-})();
+g.plane({
+  xDomain: [-10, 10],
+  yDomain: [-10, 10],
+  xLabel: 'x',
+  yLabel: 'y',
+  grid: true,
+});
+
+g.editable();

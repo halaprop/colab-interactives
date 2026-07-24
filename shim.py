@@ -1,6 +1,5 @@
 import json
 import time
-import urllib.error
 import urllib.request
 from IPython.display import HTML, display
 
@@ -14,14 +13,13 @@ _resolved = {}  # ref -> (sha, resolved_at); avoids re-hitting the GitHub
                 # API on every cell re-run within RESOLVE_TTL seconds.
 RESOLVE_TTL = 30
 
-# some CDNs (e.g. d3js.org) 403 Python's default User-Agent regardless of
-# HTTP method -- a browser's <script src> never hits this, only our own
-# fetch/HEAD checks do, so every request needs a browser-like UA.
+# GitHub's API 403s Python's default User-Agent -- a browser never hits
+# this, only our own resolve_ref() fetch does, so it needs a browser-like UA.
 _HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
 
-def _fetch(url, method='GET'):
-    return urllib.request.urlopen(urllib.request.Request(url, method=method, headers=_HEADERS), timeout=5)
+def _fetch(url):
+    return urllib.request.urlopen(urllib.request.Request(url, headers=_HEADERS), timeout=5)
 
 
 def resolve_ref(ref):
@@ -44,29 +42,19 @@ def resolve_ref(ref):
 
 def show(app, ref=None, height=650):
     base = f'https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{resolve_ref(ref or REF)}'
+    entry = f'apps/{app}/index.js'
+    src = f'{base}/{entry}'
 
-    try:
-        manifest = json.loads(_fetch(f'{base}/apps/{app}/manifest.json').read())
-    except urllib.error.HTTPError as e:
-        if e.code != 404:
-            raise  # a real fetch failure, not just "no manifest" -- don't hide it
-        manifest = {}
-
-    entry = f'apps/{app}/{manifest.get("entry", "index.js")}'
-    scripts = [(d, d if d.startswith('http') else f'{base}/{d}') for d in manifest.get('deps', [])]
-    scripts.append((entry, f'{base}/{entry}'))
-
-    for label, src in scripts:
-        try:
-            _fetch(src, method='HEAD')
-        except urllib.error.HTTPError as e:
-            raise FileNotFoundError(f'{label} -> HTTP {e.code} ({src})') from None
-
-    tags = ''.join(
-        f'<script src="{src}" onerror="'
-        f"document.getElementById('app').textContent='error: {label} not found'"
+    # No preflight check on src -- entry's own import statements pull in
+    # everything else (lib files, D3 from an ESM CDN URL), so there's
+    # nothing to enumerate up front. A missing entry or dependency fails
+    # as a module load error: onerror below catches a missing entry;
+    # a missing dependency shows in the browser console instead, naming
+    # the exact URL that failed.
+    tags = (
+        f'<script type="module" src="{src}" onerror="'
+        f"document.getElementById('app').textContent='error: {entry} not found'"
         f'"></script>'
-        for label, src in scripts
     )
 
     display(HTML(f'<style>body{{margin:0}}</style>'
