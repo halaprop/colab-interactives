@@ -1,5 +1,6 @@
 import json
 import time
+import urllib.error
 import urllib.request
 from IPython.display import HTML, display
 
@@ -13,13 +14,14 @@ _resolved = {}  # ref -> (sha, resolved_at); avoids re-hitting the GitHub
                 # API on every cell re-run within RESOLVE_TTL seconds.
 RESOLVE_TTL = 30
 
-# GitHub's API 403s Python's default User-Agent -- a browser never hits
-# this, only our own resolve_ref() fetch does, so it needs a browser-like UA.
+# some CDNs (e.g. jsDelivr) 403 Python's default User-Agent regardless of
+# HTTP method -- a browser's <script src> never hits this, only our own
+# fetch/HEAD checks do, so every request needs a browser-like UA.
 _HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
 
-def _fetch(url):
-    return urllib.request.urlopen(urllib.request.Request(url, headers=_HEADERS), timeout=5)
+def _fetch(url, method='GET'):
+    return urllib.request.urlopen(urllib.request.Request(url, method=method, headers=_HEADERS), timeout=5)
 
 
 def resolve_ref(ref):
@@ -45,17 +47,32 @@ def show(app, ref=None, height=650):
     entry = f'apps/{app}/index.js'
     src = f'{base}/{entry}'
 
-    # No preflight check on src -- entry's own import statements pull in
-    # everything else (lib files, D3 from an ESM CDN URL), so there's
-    # nothing to enumerate up front. A missing entry or dependency fails
-    # as a module load error: onerror below catches a missing entry;
-    # a missing dependency shows in the browser console instead, naming
-    # the exact URL that failed.
-    tags = (
-        f'<script type="module" src="{src}" onerror="'
-        f"document.getElementById('app').textContent='error: {entry} not found'"
-        f'"></script>'
-    )
+    try:
+        _fetch(src, method='HEAD')
+    except urllib.error.HTTPError as e:
+        raise FileNotFoundError(f'{entry} -> HTTP {e.code} ({src})') from None
+
+    # entry itself is checked above (a typo'd app name is the common
+    # mistake, and this makes it a loud Python exception). A missing
+    # dependency pulled in by entry's own imports can't be preflighted the
+    # same way -- would mean reimplementing module resolution in Python --
+    # so that case is left to the browser: .onerror and console.error
+    # below both name the exact URL, though Colab's output iframe may
+    # restrict enough (inline event-handler attributes, modals) that
+    # neither is guaranteed to surface. Built as a real <script> block
+    # with .onerror set as a JS property, not an inline onerror="" HTML
+    # attribute, since the latter is exactly the kind of thing such a
+    # sandbox tends to block.
+    script = f'''<script>
+      const s = document.createElement('script');
+      s.type = 'module';
+      s.src = {json.dumps(src)};
+      s.onerror = () => {{
+        console.error('failed to load', s.src);
+        document.getElementById('app').textContent = {json.dumps(f'error: {entry} not found')};
+      }};
+      document.body.appendChild(s);
+    </script>'''
 
     display(HTML(f'<style>body{{margin:0}}</style>'
-                  f'<div id="app" style="width:100%;height:{height}px;"></div>{tags}'))
+                  f'<div id="app" style="width:100%;height:{height}px;"></div>{script}'))

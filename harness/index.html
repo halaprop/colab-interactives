@@ -36,6 +36,7 @@
       s.type = 'module';
       s.src = `/${entryPath}`;
       s.onerror = () => {
+        console.error('failed to load', s.src);
         document.getElementById('app').textContent = `error: ${entryPath} not found`;
       };
       document.body.appendChild(s);
