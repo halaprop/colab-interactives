@@ -131,7 +131,7 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   const { move, nodeCount, tree } = rootSearch(board, empties);
 
   markPV(tree, principalVariation(board));
-  renderTree(vizEl, tree, GROW_MS, { width: 860, height: 520 });
+  renderTree(vizEl, tree, GROW_MS, { width: 860, height: 364 });
 
   const counterEl = document.createElement('div');
   Object.assign(counterEl.style, {
@@ -147,4 +147,5 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   await sleep(200);
 
   return move;
-}, { vizMinHeight: 560 }); // room for the 520px tree + counter
+}, { cellSize: 70, vizMinHeight: 410 }); // 30% smaller board; room for the
+// 364px tree (also 30% shorter) + counter
