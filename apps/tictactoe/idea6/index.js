@@ -16,119 +16,28 @@
  * mover, terminal rings, green principal-variation path, DFS reveal
  * order, honest node counter, all from lib/tictactoe.js) so the two are
  * directly comparable -- same board, same shapes, dramatically less tree.
+ *
+ * The search itself (alphaBetaSearch/alphaBetaRootSearch/alphaBetaBestMove/
+ * principalVariation) lives in lib/tictactoe.js now, generalized with a
+ * depth limit and a pluggable evaluation function -- idea6 just calls it
+ * with maxDepth = Infinity, which (since depth can then never reach it) is
+ * exactly this unlimited search. idea7 reuses the same functions with a
+ * real limit.
  */
-import { run, checkWinner, emptyCells, sleep, markPV, renderTree, animateCounter } from '../../../lib/tictactoe.js';
+import {
+  run,
+  sleep,
+  markPV,
+  renderTree,
+  animateCounter,
+  alphaBetaRootSearch,
+  principalVariation,
+} from '../../../lib/tictactoe.js';
 
 const GROW_MS = 2200;
 
-// The real alpha-beta search: computes the exact minimax value and builds
-// the real tree at the same time -- unlike idea5, there's no separate
-// illustrative pass, because the tree this actually walks IS what gets
-// drawn. alpha/beta are the bounds inherited from ancestors; the moment
-// they cross (alpha >= beta), every remaining sibling is already proven
-// unable to change the outcome, and the loop stops before even looking at
-// them -- they're never built, never visited, never counted.
-function search(board, justMoved, move, alpha, beta, depth, orderRef) {
-  const winner = checkWinner(board);
-  const node = { board, justMoved, move, order: orderRef.next++, depth, winner, children: [] };
-  node.terminal = Boolean(winner) || board.every(Boolean);
-
-  if (node.terminal) {
-    node.value = winner === 'O' ? 1 : winner === 'X' ? -1 : 0;
-    return node;
-  }
-
-  const mover = justMoved === 'O' ? 'X' : 'O';
-  let best = mover === 'O' ? -Infinity : Infinity;
-  for (const i of emptyCells(board)) {
-    const trial = board.slice();
-    trial[i] = mover;
-    const child = search(trial, mover, i, alpha, beta, depth + 1, orderRef);
-    node.children.push(child);
-    if (mover === 'O') {
-      best = Math.max(best, child.value);
-      alpha = Math.max(alpha, best);
-    } else {
-      best = Math.min(best, child.value);
-      beta = Math.min(beta, best);
-    }
-    if (alpha >= beta) break; // remaining siblings can't matter -- skip them
-  }
-  node.value = best;
-  return node;
-}
-
-// The real root decision: O's actual candidate moves, each scored via the
-// pruned search above, sharing one running alpha across candidates (same
-// as idea5's fullSearch) and assembling everything into one tree rooted
-// at the real current board. nodeCount is every node actually built --
-// the honest cost of this exact decision, pruning included.
-function rootSearch(board, empties) {
-  const orderRef = { next: 0 };
-  const tree = { board, justMoved: 'X', move: null, order: orderRef.next++, depth: 0, winner: null, terminal: false, children: [] };
-
-  let bestScore = -Infinity;
-  let bestMove = empties[0];
-  let alpha = -Infinity;
-  for (const i of empties) {
-    const trial = board.slice();
-    trial[i] = 'O';
-    const child = search(trial, 'O', i, alpha, Infinity, 1, orderRef);
-    tree.children.push(child);
-    if (child.value > bestScore) {
-      bestScore = child.value;
-      bestMove = i;
-    }
-    alpha = Math.max(alpha, bestScore);
-  }
-  tree.value = bestScore;
-  return { move: bestMove, nodeCount: orderRef.next, tree };
-}
-
-// The single best next move from `board` for `player`, via the same pruned
-// search -- uncounted and separate from rootSearch's real tree, so tracing
-// the rest of the best-play line never touches the honest node count or
-// the drawn tree.
-function bestMove(board, player) {
-  const empties = emptyCells(board);
-  let bestValue = player === 'O' ? -Infinity : Infinity;
-  let bestIndex = empties[0];
-  let alpha = -Infinity;
-  let beta = Infinity;
-  for (const i of empties) {
-    const trial = board.slice();
-    trial[i] = player;
-    const child = search(trial, player, i, alpha, beta, 0, { next: 0 });
-    const better = player === 'O' ? child.value > bestValue : child.value < bestValue;
-    if (better) {
-      bestValue = child.value;
-      bestIndex = i;
-    }
-    if (player === 'O') alpha = Math.max(alpha, bestValue);
-    else beta = Math.min(beta, bestValue);
-  }
-  return bestIndex;
-}
-
-// The moves of genuinely best play from `board` (O to move), all the way
-// to a real ending -- no ply limit needed this time, since the drawn tree
-// already goes to true terminal states, not a fixed depth cutoff.
-function principalVariation(board) {
-  const moves = [];
-  let current = board;
-  let mover = 'O';
-  while (!checkWinner(current) && !current.every(Boolean)) {
-    const idx = bestMove(current, mover);
-    moves.push(idx);
-    current = current.slice();
-    current[idx] = mover;
-    mover = mover === 'O' ? 'X' : 'O';
-  }
-  return moves;
-}
-
 run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
-  const { move, nodeCount, tree } = rootSearch(board, empties);
+  const { move, nodeCount, tree } = alphaBetaRootSearch(board, empties, Infinity, null);
 
   markPV(tree, principalVariation(board));
   renderTree(vizEl, tree, GROW_MS, { width: 860, height: 364 });
