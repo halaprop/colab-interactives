@@ -25,13 +25,10 @@
  * climbs to the true number of positions the full, untruncated search
  * actually visited.
  */
-import { run, checkWinner, emptyCells, sleep } from '../../../lib/tictactoe.js';
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { run, checkWinner, emptyCells, sleep, markPV, renderTree, animateCounter } from '../../../lib/tictactoe.js';
 
 const GROW_MS = 2200;
 const TREE_LEVELS = 5; // counting the root
-const X_COLOR = '#2f6fd1';
-const O_COLOR = '#d1473f';
 
 function minimax(board, player, counter) {
   counter.count++;
@@ -75,12 +72,12 @@ function fullSearch(board, empties) {
 // recursion, so it visits nodes in the same depth-first order minimax
 // itself does. `justMoved` is which player's mark produced this node
 // (root's is 'X', since X's real move produced the board it starts from);
-// `move` is which cell that mark was placed at, used later to walk out
-// the principal variation by identity rather than by board content (two
-// different move orders can transpose to the same board, so matching on
-// content would wrongly tag unrelated nodes elsewhere in the tree). `order`
-// is the DFS visit index, used to drive the reveal so the animation plays
-// back the actual search order, not a reshuffled one.
+// `move` is which cell that mark was placed at, used by lib's markPV to
+// walk out the principal variation by identity rather than by board
+// content (two different move orders can transpose to the same board, so
+// matching on content would wrongly tag unrelated nodes elsewhere in the
+// tree). `order` is the DFS visit index, used to drive the reveal so the
+// animation plays back the actual search order, not a reshuffled one.
 function buildTree(board, justMoved, move, depth, levels, orderRef) {
   const winner = checkWinner(board);
   const node = { board, justMoved, move, order: orderRef.next++, depth, winner, children: [] };
@@ -94,14 +91,6 @@ function buildTree(board, justMoved, move, depth, levels, orderRef) {
     node.children.push(buildTree(trial, nextPlayer, i, depth + 1, levels, orderRef));
   }
   return node;
-}
-
-// Ring color for a real terminal node -- an actual win/draw reached within
-// the drawn depth, distinct from the fill color (which says who moved).
-function terminalRingColor(node) {
-  if (node.winner === 'O') return '#2f9e5b'; // O wins here -- good for O
-  if (node.winner === 'X') return '#e0a72f'; // X wins here -- bad for O
-  return '#8a8f98'; // drawn out
 }
 
 // The single best next move from `board` for `player`, uncounted --
@@ -129,7 +118,7 @@ function bestMove(board, player) {
 // deep: each side's actual best move in turn, continuing past the drawn
 // tree's depth if needed to reach a real answer, since a node that's
 // merely "where we stopped drawing" doesn't have a true value on its own.
-// A sequence of cell indices, not board states -- see markPV for why.
+// A sequence of cell indices, not board states -- see lib's markPV for why.
 function principalVariation(board, plies) {
   const moves = [];
   let current = board;
@@ -143,89 +132,6 @@ function principalVariation(board, plies) {
     mover = mover === 'O' ? 'X' : 'O';
   }
   return moves;
-}
-
-// Tags the one true PV node at each depth with onPV = true, by walking the
-// tree's actual parent/child links following `moves` -- not by matching
-// board content, since two different move orders can transpose to the
-// same board, and a content match would wrongly tag unrelated nodes that
-// just happen to land on an identical-looking board elsewhere in the tree.
-function markPV(tree, moves) {
-  let node = tree;
-  for (const move of moves) {
-    node = node.children.find((child) => child.move === move);
-    if (!node) return;
-    node.onPV = true;
-  }
-}
-
-const PV_COLOR = '#2f9e5b';
-
-function renderTree(vizEl, treeData, ms) {
-  const width = 860;
-  const height = 380;
-  const svg = d3
-    .select(vizEl)
-    .append('svg')
-    .attr('width', width)
-    .attr('height', height)
-    .style('display', 'block')
-    .style('margin', '0 auto');
-
-  const root = d3.hierarchy(treeData);
-  d3.tree().size([width - 30, height - 30])(root);
-
-  const g = svg.append('g').attr('transform', 'translate(15,15)');
-
-  // Delay is driven by each node's own DFS visit order (recorded while
-  // building the tree), not by draw-selection index -- the reveal plays
-  // back the real search's traversal order, one full path at a time.
-  const total = root.descendants().length;
-  const perNode = ms / total;
-  const revealDuration = Math.min(80, Math.max(20, perNode * 3));
-
-  g.selectAll('path')
-    .data(root.links())
-    .enter()
-    .append('path')
-    .attr('fill', 'none')
-    .attr('stroke', (d) => (d.target.data.onPV ? PV_COLOR : '#c7ccd2'))
-    .attr('stroke-width', (d) => (d.target.data.onPV ? 2.5 : 1))
-    .attr('d', d3.linkVertical().x((d) => d.x).y((d) => d.y))
-    .attr('opacity', 0)
-    .transition()
-    .delay((d) => d.target.data.order * perNode)
-    .duration(revealDuration)
-    .attr('opacity', 1);
-
-  g.selectAll('circle')
-    .data(root.descendants())
-    .enter()
-    .append('circle')
-    .attr('cx', (d) => d.x)
-    .attr('cy', (d) => d.y)
-    .attr('r', (d) => (d.data.onPV ? Math.max(4, 6 - d.data.depth * 1.3) : Math.max(1, 6 - d.data.depth * 1.3)))
-    .attr('fill', (d) => (d.data.justMoved === 'X' ? '#2f6fd1' : '#d1473f'))
-    .attr('stroke', (d) => (d.data.onPV ? PV_COLOR : d.data.terminal ? terminalRingColor(d.data) : 'none'))
-    .attr('stroke-width', (d) => (d.data.onPV ? 2.5 : d.data.terminal ? 1.5 : 0))
-    .attr('opacity', 0)
-    .transition()
-    .delay((d) => d.data.order * perNode)
-    .duration(revealDuration)
-    .attr('opacity', 1);
-}
-
-function animateCounter(el, target, ms) {
-  return new Promise((resolve) => {
-    const start = performance.now();
-    function tick(now) {
-      const t = Math.min(1, (now - start) / ms);
-      el.textContent = `${Math.round(t * target).toLocaleString()} positions searched`;
-      if (t < 1) requestAnimationFrame(tick);
-      else resolve();
-    }
-    requestAnimationFrame(tick);
-  });
 }
 
 run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
