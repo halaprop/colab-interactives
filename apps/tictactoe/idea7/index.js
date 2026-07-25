@@ -80,7 +80,7 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   const chosen = backdrop.tree.children.find((child) => child.move === real.move);
   if (chosen) chosen.onChosen = true;
 
-  renderTree(vizEl, backdrop.tree, GROW_MS, { width: 860, height: 520, evalDepth: EVAL_DEPTH });
+  renderTree(vizEl, backdrop.tree, GROW_MS, { width: 860, height: 364, evalDepth: EVAL_DEPTH });
 
   const counterEl = document.createElement('div');
   Object.assign(counterEl.style, {
@@ -96,4 +96,5 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   await sleep(200);
 
   return real.move;
-}, { vizMinHeight: 560 }); // room for the 520px tree + counter
+}, { cellSize: 70, vizMinHeight: 410 }); // 30% smaller board; room for the
+// 364px tree (also 30% shorter) + counter -- same treatment as idea6
