@@ -96,5 +96,9 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   await sleep(200);
 
   return real.move;
-}, { cellSize: 70, vizMinHeight: 410 }); // 30% smaller board; room for the
-// 364px tree (also 30% shorter) + counter -- same treatment as idea6
+}, {
+  cellSize: 70,
+  vizMinHeight: 410, // 30% smaller board; room for the 364px tree (also
+  // 30% shorter) + counter -- same treatment as idea6
+  description: 'Idea 7:\nIf the search space is still huge, stop searching early. Change the search from finding the "best" move to the "most promising" one.',
+});

@@ -56,5 +56,9 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   await sleep(200);
 
   return move;
-}, { cellSize: 70, vizMinHeight: 410 }); // 30% smaller board; room for the
-// 364px tree (also 30% shorter) + counter
+}, {
+  cellSize: 70,
+  vizMinHeight: 410, // 30% smaller board; room for the 364px tree (also
+  // 30% shorter) + counter
+  description: 'Idea 6:\nSame as Idea 5, but skip a branch as soon as we can tell it will be worse than one already traversed. This skips a lot of branches!',
+});

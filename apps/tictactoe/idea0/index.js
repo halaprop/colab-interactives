@@ -10,4 +10,4 @@ import { run, shuffleFlash } from '../../../lib/tictactoe.js';
 run(document.querySelector('#app'), async (board, empties, cellEls) => {
   await shuffleFlash(empties, cellEls);
   return empties[Math.floor(Math.random() * empties.length)];
-});
+}, { description: 'Idea 0:\nPick a random, legal move.' });

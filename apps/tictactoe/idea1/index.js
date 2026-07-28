@@ -32,4 +32,4 @@ run(document.querySelector('#app'), async (board, empties, cellEls) => {
 
   await shuffleFlash(empties, cellEls);
   return empties[Math.floor(Math.random() * empties.length)];
-});
+}, { description: 'Idea 1:\nMake a winning move if possible, otherwise pick at random.' });

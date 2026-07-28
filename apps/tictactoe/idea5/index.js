@@ -155,5 +155,8 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   await sleep(200);
 
   return move;
-}, { vizMinHeight: 420 }); // room for the 380px tree + counter, reserved up
-// front so the board doesn't jump down into that space once it first draws
+}, {
+  vizMinHeight: 420, // room for the 380px tree + counter, reserved up
+  // front so the board doesn't jump down into that space once it first draws
+  description: 'Idea 5:\nSearch every possible game to the end, and pick the move that guarantees the best outcome.',
+});
