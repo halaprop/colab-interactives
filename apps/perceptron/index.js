@@ -40,7 +40,7 @@ root.appendChild(controlsEl);
 root.appendChild(networkEl);
 root.appendChild(activationEl);
 
-const state = { x1: 1, x2: 0.3, w1: 1, w2: -1, bias: 0 };
+const state = { x1: 0.8, x2: 0.4, w1: 1, w2: -1.2, bias: 0.5 };
 
 // ---- network: two inputs + a bias edge -> one output, through ReLU ----
 
@@ -129,9 +129,88 @@ network.edge({
   },
 });
 
+// ---- activation column: ReLU curve, with a toggle to an input-plane view ----
+//
+// activationEl hosts two full-size diagrams stacked via position:absolute
+// (never display:none) so both keep real, stable dimensions the whole
+// time -- toggling which one is on top is a visibility flip, not a
+// layout change, so neither Diagram's ResizeObserver ever has to
+// recover from a 0x0 measurement.
+const activationStack = document.createElement('div');
+const activationCurveEl = document.createElement('div');
+const inputSpaceEl = document.createElement('div');
+Object.assign(activationStack.style, { position: 'relative', width: '100%', height: '100%' });
+Object.assign(activationCurveEl.style, { position: 'absolute', inset: '0' });
+Object.assign(inputSpaceEl.style, { position: 'absolute', inset: '0', visibility: 'hidden' });
+activationStack.appendChild(activationCurveEl);
+activationStack.appendChild(inputSpaceEl);
+activationEl.appendChild(activationStack);
+
+// Small switch, top-right corner of the column: flips it between the
+// ReLU curve and the sunny/work input plane. Labeled on both sides so
+// it reads on its own; defaults to the activation curve.
+const viewToggle = document.createElement('label');
+Object.assign(viewToggle.style, {
+  position: 'absolute',
+  top: '10px',
+  right: '14px',
+  zIndex: '2',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+  fontSize: '13px',
+  color: '#2b2f36',
+  cursor: 'pointer',
+  userSelect: 'none',
+});
+viewToggle.title = 'Switch between the activation curve and the sunny/work input plane';
+const viewToggleLeftLabel = document.createElement('span');
+viewToggleLeftLabel.textContent = 'activation';
+const viewToggleTrack = document.createElement('span');
+Object.assign(viewToggleTrack.style, {
+  position: 'relative',
+  width: '26px',
+  height: '14px',
+  borderRadius: '7px',
+  background: '#d5d8dd',
+  transition: 'background 0.15s',
+  flex: '0 0 auto',
+});
+const viewToggleThumb = document.createElement('span');
+Object.assign(viewToggleThumb.style, {
+  position: 'absolute',
+  top: '2px',
+  left: '2px',
+  width: '10px',
+  height: '10px',
+  borderRadius: '50%',
+  background: '#fff',
+  transition: 'left 0.15s',
+});
+viewToggleTrack.appendChild(viewToggleThumb);
+const viewToggleInput = document.createElement('input');
+viewToggleInput.type = 'checkbox';
+Object.assign(viewToggleInput.style, { position: 'absolute', opacity: '0', width: '0', height: '0' });
+const viewToggleRightLabel = document.createElement('span');
+viewToggleRightLabel.textContent = 'input';
+const setView = (showInputSpace) => {
+  activationCurveEl.style.visibility = showInputSpace ? 'hidden' : 'visible';
+  inputSpaceEl.style.visibility = showInputSpace ? 'visible' : 'hidden';
+  viewToggleTrack.style.background = showInputSpace ? '#2f6fd1' : '#d5d8dd';
+  viewToggleThumb.style.left = showInputSpace ? '14px' : '2px';
+};
+viewToggleInput.addEventListener('change', () => setView(viewToggleInput.checked));
+viewToggle.appendChild(viewToggleLeftLabel);
+viewToggle.appendChild(viewToggleInput);
+viewToggle.appendChild(viewToggleTrack);
+viewToggle.appendChild(viewToggleRightLabel);
+activationStack.appendChild(viewToggle);
+setView(false);
+
 // ---- activation: static ReLU curve + a dot that rides it ----
 
-const activation = Diagram(activationEl, { state });
+const activation = Diagram(activationCurveEl, { state });
 
 const activationPlane = activation.plane({
   xDomain: [-4, 4],
@@ -157,11 +236,11 @@ const curvePath = activationPlane.marksGroup
 // not a Node/Edge), so redraw it on every render the same way axes and
 // nodes already do -- otherwise it's stuck with whatever scale existed
 // the moment it was first drawn, which can be stale: this diagram's
-// container is a freshly-created flex column, and DiagramCore measures
-// it synchronously at construction, before the browser necessarily
-// finishes that layout pass. The async ResizeObserver settling fires a
-// real render that fixes the axes/nodes but would leave a one-time
-// curve behind.
+// container is a freshly-created, absolutely-positioned div, and
+// DiagramCore measures it synchronously at construction, before the
+// browser necessarily finishes that layout pass. The async
+// ResizeObserver settling fires a real render that fixes the
+// axes/nodes but would leave a one-time curve behind.
 const baseActivationRender = activation.render.bind(activation);
 activation.render = () => {
   baseActivationRender();
@@ -181,6 +260,67 @@ activation.node({
     self.y = s.activation;
     self.cls = s.activation > 0 ? 'go' : 'nogo';
     self.text = s.activation.toFixed(2);
+  },
+});
+
+// ---- input plane: the same decision, seen as a line through (sunny, work) ----
+//
+// Behind the toggle: the perceptron's decision boundary is just
+// w1*x1 + w2*x2 + bias = 0, a line in the two-input plane. Everything
+// on the positive side of it is where the ReLU fires (activation > 0,
+// go to the beach); everything on the other side is where it doesn't.
+
+const inputSpace = Diagram(inputSpaceEl, { state });
+
+inputSpace.plane({
+  xDomain: [-2, 2],
+  yDomain: [-2, 2],
+  xLabel: 'sunny (x1)',
+  yLabel: 'work (x2)',
+  grid: true,
+});
+
+inputSpace.line({
+  id: 'boundary',
+  extent: 'infinite',
+  stroke: '#2b2f36',
+  strokeWidth: 2,
+  onChange: (s, self) => {
+    const { w1, w2, bias } = s;
+    const magSq = w1 * w1 + w2 * w2;
+    if (magSq < 1e-6) {
+      // w1 == w2 == 0: no boundary, the whole plane is one verdict.
+      self.visible = false;
+      return;
+    }
+    self.visible = true;
+    // A point on the line, picked off whichever axis has the larger
+    // weight so the divide stays away from zero.
+    const p0 =
+      Math.abs(w1) >= Math.abs(w2) ? { x: -bias / w1, y: 0 } : { x: 0, y: -bias / w2 };
+    // (-w2, w1) is the weight vector (w1, w2) rotated 90deg CCW -- a
+    // fixed rotation, not one that depends on the weights' actual
+    // values. That fixes which screen side is "uphill" (sum > 0) once
+    // and for all, so rightFill/leftFill below can stay hardcoded
+    // instead of swapping every time a weight changes sign.
+    self.from = p0;
+    self.to = { x: p0.x - w2, y: p0.y + w1 };
+    self.rightFill = '#2f9e5b'; // sum > 0 -- go to the beach (matches the go/nogo dot)
+    self.leftFill = '#d1473f'; // sum <= 0 -- stay home
+  },
+});
+
+// The current (sunny, work) input, so moving x1/x2 has something to
+// move too -- the line above only reacts to w1/w2/bias, since those
+// are the only terms in the boundary equation.
+inputSpace.node({
+  id: 'input-point',
+  r: 7,
+  shape: 'circle',
+  onChange: (s, self) => {
+    self.x = s.x1;
+    self.y = s.x2;
+    self.cls = s.activation > 0 ? 'go' : 'nogo';
   },
 });
 
@@ -204,6 +344,7 @@ controlsEl.appendChild(controlsBody);
 const rerenderBoth = () => {
   network.render();
   activation.render();
+  inputSpace.render();
 };
 
 const controls = Controls(controlsBody, state);
