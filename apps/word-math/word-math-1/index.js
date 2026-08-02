@@ -109,7 +109,7 @@ root.innerHTML = `
        regardless of word length -- this is what keeps the bands aligned */
     .word-math .equation {
       display: grid;
-      grid-template-columns: 110px auto;
+      grid-template-columns: 132px auto;
       align-items: center;
       row-gap: 8px;
       min-height: 140px;
@@ -179,7 +179,7 @@ function labelCell(text) {
 
 let query = null; // { word, vec }
 let neighbors = []; // [{ word, vec, sim }]
-let selectedIdx = 0;
+let selectedIdx = null; // no equation shown until a neighbor is clicked
 
 function renderNeighbors() {
   neighborsGrid.innerHTML = '';
@@ -210,7 +210,7 @@ function renderNeighbors() {
 
 function renderEquation() {
   equation.innerHTML = '';
-  if (!query || neighbors.length === 0) return;
+  if (!query || neighbors.length === 0 || selectedIdx === null) return;
 
   const neighbor = neighbors[selectedIdx];
   const dims = query.vec.length;
@@ -246,7 +246,7 @@ async function main() {
     const word = raw.trim().toLowerCase();
     query = null;
     neighbors = [];
-    selectedIdx = 0;
+    selectedIdx = null;
 
     if (!word) {
       vectorLine.textContent = '';

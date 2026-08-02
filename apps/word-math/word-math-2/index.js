@@ -72,7 +72,7 @@ root.innerHTML = `
        of word length -- this is what keeps the bands aligned */
     .word-math .equation {
       display: grid;
-      grid-template-columns: 110px auto;
+      grid-template-columns: 132px auto;
       align-items: center;
       row-gap: 8px;
       min-height: 140px;
@@ -103,6 +103,13 @@ root.innerHTML = `
     .word-math .strip-cell {
       width: 8px;
       height: 36px;
+    }
+    .word-math .also-close {
+      grid-column: 1 / -1;
+      font-size: 13px;
+      color: var(--ink-muted);
+      text-align: center;
+      margin-top: 2px;
     }
   </style>
   <div class="hint-line">type an expression like car + pull</div>
@@ -185,12 +192,14 @@ async function main() {
     }
 
     const used = new Set(terms.map((t) => t.word));
-    let best = null;
+    const scored = [];
     for (const w of words) {
       if (used.has(w)) continue;
-      const sim = cosineSim(result, vecOf(w));
-      if (!best || sim > best.sim) best = { word: w, sim };
+      scored.push({ word: w, sim: cosineSim(result, vecOf(w)) });
     }
+    scored.sort((a, b) => b.sim - a.sim);
+    const best = scored[0];
+    const runnersUp = scored.slice(1, 3);
 
     statusLine.textContent = '';
     const colors = currentColors();
@@ -207,6 +216,13 @@ async function main() {
 
     equation.appendChild(labelCell(`= ${best.word}`, 'result'));
     equation.appendChild(buildStrip(vecOf(best.word), colors));
+
+    if (runnersUp.length) {
+      const also = document.createElement('div');
+      also.className = 'also-close';
+      also.textContent = `also close: ${runnersUp.map((r) => r.word).join(', ')}`;
+      equation.appendChild(also);
+    }
   }
 
   wordInput.addEventListener('input', () => {
