@@ -60,10 +60,11 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
     fontWeight: '600',
     color: '#2b2f36',
     marginTop: '8px',
+    whiteSpace: 'pre-line',
   });
   vizEl.appendChild(counterEl);
 
-  await animateCounter(counterEl, nodeCount, GROW_MS, `positions searched (no pruning needs ${unprunedCount.toLocaleString()})`);
+  await animateCounter(counterEl, nodeCount, GROW_MS, `positions searched\nwithout pruning, this would search ${unprunedCount.toLocaleString()} positions`);
   await sleep(200);
 
   return move;

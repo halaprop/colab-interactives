@@ -96,10 +96,15 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
     fontWeight: '600',
     color: '#2b2f36',
     marginTop: '8px',
+    whiteSpace: 'pre-line',
   });
   vizEl.appendChild(counterEl);
 
-  await animateCounter(counterEl, real.nodeCount, GROW_MS, `positions searched (a full search needs ${backdrop.nodeCount.toLocaleString()})`);
+  // "uncapped", not "no pruning" -- backdrop is still idea6's pruned
+  // search, just without idea7's own depth cap. Naming it "full search"
+  // here would wrongly suggest the same (much bigger) unpruned figure
+  // idea6 shows, when it's actually the smaller pruned one.
+  await animateCounter(counterEl, real.nodeCount, GROW_MS, `positions searched\nwithout a depth cap, this would search ${backdrop.nodeCount.toLocaleString()} positions`);
   await sleep(200);
 
   return real.move;
