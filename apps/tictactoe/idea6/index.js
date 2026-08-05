@@ -3,9 +3,12 @@
  *
  * Alpha-beta pruning: the exact same search as idea5 (full minimax, same
  * guaranteed-optimal move), but skip any branch the instant it's proven it
- * can't change the outcome. Same answer, far fewer positions visited --
- * typically a couple thousand here (measured, not estimated), down from
- * the tens of thousands idea5 needs for the same decision.
+ * can't change the outcome. Same answer, far fewer positions visited -- the
+ * counter under the tree shows both numbers (measured, not estimated): the
+ * real pruned count driving this move, and alongside it what a plain,
+ * unpruned minimax over the same position would have needed (via
+ * boundedRootSearch with maxDepth=Infinity, computed purely for that
+ * comparison and otherwise unused).
  *
  * Because the pruned tree is small enough, this draws the *entire* real
  * tree the search actually walked -- not an illustrative slice like idea5
@@ -31,6 +34,7 @@ import {
   renderTree,
   animateCounter,
   alphaBetaRootSearch,
+  boundedRootSearch,
   principalVariation,
 } from '../../../lib/tictactoe.js';
 
@@ -38,6 +42,13 @@ const GROW_MS = 2200;
 
 run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   const { move, nodeCount, tree } = alphaBetaRootSearch(board, empties, Infinity, null);
+
+  // Same position, no pruning -- boundedRootSearch with maxDepth=Infinity is
+  // plain minimax (every node down to a real ending gets built, nothing
+  // skipped early). Only its nodeCount is used, purely as a comparison
+  // figure for the counter below; it plays no part in the move played or
+  // the tree actually drawn.
+  const { nodeCount: unprunedCount } = boundedRootSearch(board, empties, Infinity, null);
 
   markPV(tree, principalVariation(board));
   renderTree(vizEl, tree, GROW_MS, { width: 860, height: 364 });
@@ -52,7 +63,7 @@ run(document.querySelector('#app'), async (board, empties, cellEls, vizEl) => {
   });
   vizEl.appendChild(counterEl);
 
-  await animateCounter(counterEl, nodeCount, GROW_MS);
+  await animateCounter(counterEl, nodeCount, GROW_MS, `positions searched (no pruning needs ${unprunedCount.toLocaleString()})`);
   await sleep(200);
 
   return move;
