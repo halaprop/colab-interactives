@@ -33,9 +33,9 @@ const networkEl = document.createElement('div');
 const activationEl = document.createElement('div');
 
 Object.assign(root.style, { display: 'flex', width: '100%' });
-Object.assign(controlsEl.style, { width: '26%', height: '100%', flex: '0 0 auto' });
-Object.assign(networkEl.style, { width: '38%', height: '100%', flex: '0 0 auto' });
-Object.assign(activationEl.style, { width: '36%', height: '100%', flex: '0 0 auto' });
+Object.assign(controlsEl.style, { width: '220px', height: '100%', flex: '0 0 220px' });
+Object.assign(networkEl.style, { height: '100%', flex: '1 1 0%' });
+Object.assign(activationEl.style, { height: '100%', flex: '1 1 0%' });
 root.appendChild(controlsEl);
 root.appendChild(networkEl);
 root.appendChild(activationEl);
@@ -79,8 +79,9 @@ network.node({
   x: -5,
   y: 4,
   sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
-    self.text = `Rocky: ${s.x1.toFixed(0)}`;
+    self.text = `Rocky\n${s.x1.toFixed(0)}`;
   },
 });
 
@@ -89,8 +90,9 @@ network.node({
   x: -5,
   y: -2,
   sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
-    self.text = `Mr. T: ${s.x2.toFixed(0)}`;
+    self.text = `Mr. T\n${s.x2.toFixed(0)}`;
   },
 });
 
@@ -99,9 +101,34 @@ network.node({
   x: 5,
   y: 0,
   sizeKey: 'l',
+  r: 62, // bigger than rocky/mrt -- it carries its name plus the live verdict, not just one value
+  textPlacement: 'middle',
+  fontKey: 'l',
   onChange: (s, self) => {
     self.cls = s.activation > 0 ? 'go' : 'nogo';
-    self.text = `good day? ${s.activation > 0 ? 'YES' : 'no'} (${s.sum.toFixed(2)})\ncorrect outputs: ${countCorrect(s)}/4`;
+    self.textFill = '#fff';
+    self.text = `Good\nDay\n${s.sum.toFixed(2)}`;
+  },
+});
+
+// "correct outputs: N/4" is a different kind of fact than the node's
+// own activation -- a summary over all 4 truth-table corners, not a
+// per-instance reading -- so it stays a separate caption below the
+// circle rather than folding into the node's own (already full) inside
+// text. An invisible node co-located with 'output' (shape:'circle' so
+// 'below' placement is available at all -- shape:'none' always forces
+// 'middle', per lib/diagram.js) is the same trick 'output-name' used
+// to use, just for the opposite placement.
+network.node({
+  id: 'output-stats',
+  x: 5,
+  y: 0,
+  r: 62,
+  fill: 'transparent',
+  stroke: 'none',
+  textPlacement: 'below',
+  onChange: (s, self) => {
+    self.text = `correct\noutputs: ${countCorrect(s)}/4`;
   },
 });
 
@@ -116,7 +143,7 @@ network.edge({
   to: 'output',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `w1 = ${s.w1.toFixed(2)}`;
+    self.label = s.w1.toFixed(2);
     weightStyle(self, s.w1);
   },
 });
@@ -126,7 +153,7 @@ network.edge({
   to: 'output',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `w2 = ${s.w2.toFixed(2)}`;
+    self.label = s.w2.toFixed(2);
     weightStyle(self, s.w2);
   },
 });
@@ -360,7 +387,7 @@ TRUTH_TABLE.forEach(({ x1, x2, good }) => {
 // ---- controls: sliders write into the shared state, then re-render both ----
 
 const heading = document.createElement('div');
-heading.textContent = 'Who should I invite to the beach?';
+heading.textContent = 'Beach Day';
 Object.assign(heading.style, {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
   fontSize: '22px',
@@ -380,11 +407,73 @@ const rerenderBoth = () => {
   inputSpace.render();
 };
 
+// A small on/off pill switch -- same visual language as the activation/
+// input-plane view toggle below, just sized for use as a primary control
+// rather than a corner icon. Built as plain DOM (not a Controls method)
+// since it's a one-off compound row (two switches sharing one "Invite"
+// label), not a general slider replacement.
+function switchInput(label, checked, onChange) {
+  const wrap = document.createElement('label');
+  Object.assign(wrap.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    userSelect: 'none',
+    fontSize: '16px',
+    color: '#2b2f36',
+  });
+  const text = document.createElement('span');
+  text.textContent = label;
+  text.style.whiteSpace = 'nowrap';
+  const track = document.createElement('span');
+  Object.assign(track.style, {
+    position: 'relative',
+    width: '32px',
+    height: '18px',
+    borderRadius: '9px',
+    background: checked ? '#2f6fd1' : '#d5d8dd',
+    transition: 'background 0.15s',
+    flex: '0 0 auto',
+  });
+  const thumb = document.createElement('span');
+  Object.assign(thumb.style, {
+    position: 'absolute',
+    top: '2px',
+    left: checked ? '16px' : '2px',
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    background: '#fff',
+    transition: 'left 0.15s',
+  });
+  track.appendChild(thumb);
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = checked;
+  Object.assign(checkbox.style, { position: 'absolute', opacity: '0', width: '0', height: '0' });
+  checkbox.addEventListener('change', () => {
+    track.style.background = checkbox.checked ? '#2f6fd1' : '#d5d8dd';
+    thumb.style.left = checkbox.checked ? '16px' : '2px';
+    onChange(checkbox.checked);
+  });
+  wrap.appendChild(text);
+  wrap.appendChild(checkbox);
+  wrap.appendChild(track);
+  return wrap;
+}
+
 const controls = Controls(controlsBody, state);
-controls.slider({ label: 'Invite Rocky (x1)', min: 0, max: 1, step: 1, bind: 'x1', onInput: rerenderBoth });
-controls.slider({ label: 'Invite Mr. T (x2)', min: 0, max: 1, step: 1, bind: 'x2', onInput: rerenderBoth });
-controls.slider({ label: 'Weight: Rocky -> output (w1)', min: -2, max: 2, step: 0.1, bind: 'w1', onInput: rerenderBoth });
-controls.slider({ label: 'Weight: Mr. T -> output (w2)', min: -2, max: 2, step: 0.1, bind: 'w2', onInput: rerenderBoth });
-controls.slider({ label: 'Bias', min: -2, max: 2, step: 0.1, bind: 'bias', onInput: rerenderBoth });
+
+const inviteRow = controls.panel.append('div').attr('class', 'controls-row');
+inviteRow.append('div').attr('class', 'controls-row-header').append('span').attr('class', 'controls-label').text('Invite');
+const inviteSwitches = inviteRow.append('div').style('display', 'flex').style('justify-content', 'space-between').style('align-items', 'center');
+inviteSwitches.node().appendChild(switchInput('Rocky', state.x1 === 1, (checked) => { state.x1 = checked ? 1 : 0; rerenderBoth(); }));
+inviteSwitches.node().appendChild(switchInput('Mr. T', state.x2 === 1, (checked) => { state.x2 = checked ? 1 : 0; rerenderBoth(); }));
+
+controls.panel.append('div').attr('class', 'controls-section').text('Weights');
+controls.slider({ label: 'Rocky', min: -2, max: 2, step: 0.1, bind: 'w1', onInput: rerenderBoth, showBounds: false });
+controls.slider({ label: 'Mr. T', min: -2, max: 2, step: 0.1, bind: 'w2', onInput: rerenderBoth, showBounds: false });
+controls.slider({ label: 'Bias', min: -2, max: 2, step: 0.1, bind: 'bias', onInput: rerenderBoth, showBounds: false });
 
 rerenderBoth();

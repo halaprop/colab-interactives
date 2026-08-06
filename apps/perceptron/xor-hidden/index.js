@@ -42,9 +42,9 @@ const networkEl = document.createElement('div');
 const activationEl = document.createElement('div');
 
 Object.assign(root.style, { display: 'flex', width: '100%' });
-Object.assign(controlsEl.style, { width: '26%', height: '100%', flex: '0 0 auto' });
-Object.assign(networkEl.style, { width: '38%', height: '100%', flex: '0 0 auto' });
-Object.assign(activationEl.style, { width: '36%', height: '100%', flex: '0 0 auto' });
+Object.assign(controlsEl.style, { width: '220px', height: '100%', flex: '0 0 220px' });
+Object.assign(networkEl.style, { height: '100%', flex: '1 1 0%' });
+Object.assign(activationEl.style, { height: '100%', flex: '1 1 0%' });
 root.appendChild(controlsEl);
 root.appendChild(networkEl);
 root.appendChild(activationEl);
@@ -109,9 +109,10 @@ network.node({
   id: 'rocky',
   x: -6,
   y: 5,
-  sizeKey: 'm',
+  sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
-    self.text = `Rocky: ${s.x1.toFixed(0)}`;
+    self.text = `Rocky\n${s.x1.toFixed(0)}`;
   },
 });
 
@@ -119,31 +120,34 @@ network.node({
   id: 'mrt',
   x: -6,
   y: -5,
-  sizeKey: 'm',
+  sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
-    self.text = `Mr. T: ${s.x2.toFixed(0)}`;
+    self.text = `Mr. T\n${s.x2.toFixed(0)}`;
   },
 });
 
 network.node({
   id: 'hiddenA',
   x: 0,
-  y: 5,
-  sizeKey: 'm',
+  y: 2.5, // on the straight line from rocky(-6,5) to output(6,0), so that leg of the path reads as one line, not a bend
+  sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
     self.cls = s.hA > 0 ? 'go' : 'nogo';
-    self.text = `A: ${s.hA.toFixed(2)}`;
+    self.text = `A\n${s.hA.toFixed(2)}`;
   },
 });
 
 network.node({
   id: 'hiddenB',
   x: 0,
-  y: -5,
-  sizeKey: 'm',
+  y: -2.5, // on the straight line from mrt(-6,-5) to output(6,0), same reasoning as hiddenA
+  sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
     self.cls = s.hB > 0 ? 'go' : 'nogo';
-    self.text = `B: ${s.hB.toFixed(2)}`;
+    self.text = `B\n${s.hB.toFixed(2)}`;
   },
 });
 
@@ -152,9 +156,35 @@ network.node({
   x: 6,
   y: 0,
   sizeKey: 'l',
+  r: 62, // bigger than the other nodes -- it carries its name plus the live verdict, not just one value
+  textPlacement: 'middle',
+  fontKey: 'l',
   onChange: (s, self) => {
     self.cls = s.activation > 0 ? 'go' : 'nogo';
-    self.text = `good day? ${s.activation > 0 ? 'YES' : 'no'} (${s.activation.toFixed(2)})\ncorrect outputs: ${countCorrect(s)}/4`;
+    self.textFill = '#fff';
+    // The pre-ReLU sum, not the clamped s.activation -- its sign alone
+    // already tells yes/no (matching perceptron/single and xor-single),
+    // whereas activation is clamped to exactly 0 for every "no" case
+    // and so can't distinguish "barely no" from "no by a mile".
+    const rawSum = s.hA * s.vA + s.hB * s.vB + s.bO;
+    self.text = `Good\nDay\n${rawSum.toFixed(2)}`;
+  },
+});
+
+// "correct outputs: N/4" is a summary over all 4 truth-table corners,
+// not a per-instance reading, so it stays a separate caption below the
+// circle -- see xor-single's 'output-stats' for why (same trick, same
+// reasoning, kept separate per this file's own copy-not-share convention).
+network.node({
+  id: 'output-stats',
+  x: 6,
+  y: 0,
+  r: 100, // bigger than output's own r:62 on purpose -- pushes this caption further down so it clears the vB edge label, which lands close to the real circle's edge
+  fill: 'transparent',
+  stroke: 'none',
+  textPlacement: 'below',
+  onChange: (s, self) => {
+    self.text = `correct\noutputs: ${countCorrect(s)}/4`;
   },
 });
 
@@ -169,7 +199,7 @@ network.edge({
   to: 'hiddenA',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `wA1 = ${s.wA1.toFixed(2)}`;
+    self.label = s.wA1.toFixed(2);
     weightStyle(self, s.wA1);
   },
 });
@@ -179,7 +209,7 @@ network.edge({
   to: 'hiddenA',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `wA2 = ${s.wA2.toFixed(2)}`;
+    self.label = s.wA2.toFixed(2);
     weightStyle(self, s.wA2);
   },
 });
@@ -189,7 +219,7 @@ network.edge({
   to: 'hiddenB',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `wB1 = ${s.wB1.toFixed(2)}`;
+    self.label = s.wB1.toFixed(2);
     weightStyle(self, s.wB1);
   },
 });
@@ -199,7 +229,7 @@ network.edge({
   to: 'hiddenB',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `wB2 = ${s.wB2.toFixed(2)}`;
+    self.label = s.wB2.toFixed(2);
     weightStyle(self, s.wB2);
   },
 });
@@ -207,7 +237,7 @@ network.edge({
 // Bias edges: from is a literal point, not a node id -- the endpoint
 // overload's point->node case, so each has no source node of its own.
 network.edge({
-  from: { x: 0, y: 8 },
+  from: { x: 0, y: 5.5 }, // same 3-unit drop to hiddenA as before, just following its new y:2.5
   to: 'hiddenA',
   arrow: true,
   onChange: (s, self) => {
@@ -217,7 +247,7 @@ network.edge({
 });
 
 network.edge({
-  from: { x: 0, y: -8 },
+  from: { x: 0, y: -5.5 }, // same 3-unit drop to hiddenB as before, just following its new y:-2.5
   to: 'hiddenB',
   arrow: true,
   onChange: (s, self) => {
@@ -231,7 +261,7 @@ network.edge({
   to: 'output',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `vA = ${s.vA.toFixed(2)}`;
+    self.label = s.vA.toFixed(2);
     weightStyle(self, s.vA);
   },
 });
@@ -241,7 +271,7 @@ network.edge({
   to: 'output',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `vB = ${s.vB.toFixed(2)}`;
+    self.label = s.vB.toFixed(2);
     weightStyle(self, s.vB);
   },
 });
@@ -533,7 +563,7 @@ TRUTH_TABLE.forEach(({ x1, x2, good }) => {
 // ---- controls: sliders write into the shared state, then re-render both ----
 
 const heading = document.createElement('div');
-heading.textContent = 'Who should I invite to the beach?';
+heading.textContent = 'Beach Day';
 Object.assign(heading.style, {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
   fontSize: '22px',
@@ -553,28 +583,92 @@ const rerenderBoth = () => {
   inputSpace.render();
 };
 
+// A small on/off pill switch -- same visual language as the activation/
+// input-plane view toggle below, just sized for use as a primary control
+// rather than a corner icon. Built as plain DOM (not a Controls method)
+// since it's a one-off compound row (two switches sharing one "Invite"
+// label), not a general slider replacement.
+function switchInput(label, checked, onChange) {
+  const wrap = document.createElement('label');
+  Object.assign(wrap.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    userSelect: 'none',
+    fontSize: '16px',
+    color: '#2b2f36',
+  });
+  const text = document.createElement('span');
+  text.textContent = label;
+  text.style.whiteSpace = 'nowrap';
+  const track = document.createElement('span');
+  Object.assign(track.style, {
+    position: 'relative',
+    width: '32px',
+    height: '18px',
+    borderRadius: '9px',
+    background: checked ? '#2f6fd1' : '#d5d8dd',
+    transition: 'background 0.15s',
+    flex: '0 0 auto',
+  });
+  const thumb = document.createElement('span');
+  Object.assign(thumb.style, {
+    position: 'absolute',
+    top: '2px',
+    left: checked ? '16px' : '2px',
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    background: '#fff',
+    transition: 'left 0.15s',
+  });
+  track.appendChild(thumb);
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = checked;
+  Object.assign(checkbox.style, { position: 'absolute', opacity: '0', width: '0', height: '0' });
+  checkbox.addEventListener('change', () => {
+    track.style.background = checkbox.checked ? '#2f6fd1' : '#d5d8dd';
+    thumb.style.left = checkbox.checked ? '16px' : '2px';
+    onChange(checkbox.checked);
+  });
+  wrap.appendChild(text);
+  wrap.appendChild(checkbox);
+  wrap.appendChild(track);
+  return wrap;
+}
+
 const controls = Controls(controlsBody, state);
+
+const inviteRow = controls.panel.append('div').attr('class', 'controls-row');
+inviteRow.append('div').attr('class', 'controls-row-header').append('span').attr('class', 'controls-label').text('Invite');
+const inviteSwitches = inviteRow.append('div').style('display', 'flex').style('justify-content', 'space-between').style('align-items', 'center');
+inviteSwitches.node().appendChild(switchInput('Rocky', state.x1 === 1, (checked) => { state.x1 = checked ? 1 : 0; rerenderBoth(); }));
+inviteSwitches.node().appendChild(switchInput('Mr. T', state.x2 === 1, (checked) => { state.x2 = checked ? 1 : 0; rerenderBoth(); }));
 
 function sectionHeading(text) {
   controls.panel.append('div').attr('class', 'controls-section').text(text);
 }
 
-controls.slider({ label: 'Invite Rocky (x1)', min: 0, max: 1, step: 1, bind: 'x1', onInput: rerenderBoth });
-controls.slider({ label: 'Invite Mr. T (x2)', min: 0, max: 1, step: 1, bind: 'x2', onInput: rerenderBoth });
+const NARROW = 80;
 
-sectionHeading('Hidden unit A');
-controls.slider({ label: 'Weight: Rocky -> A (wA1)', min: -2, max: 2, step: 0.1, bind: 'wA1', onInput: rerenderBoth });
-controls.slider({ label: 'Weight: Mr. T -> A (wA2)', min: -2, max: 2, step: 0.1, bind: 'wA2', onInput: rerenderBoth });
-controls.slider({ label: 'Bias A', min: -2, max: 2, step: 0.1, bind: 'bA', onInput: rerenderBoth });
+sectionHeading('Hidden A');
+controls.sliderPair(
+  { label: 'Rocky', min: -2, max: 2, step: 0.1, bind: 'wA1', onInput: rerenderBoth, width: NARROW },
+  { label: 'Mr. T', min: -2, max: 2, step: 0.1, bind: 'wA2', onInput: rerenderBoth, width: NARROW });
+controls.slider({ label: 'Bias', min: -2, max: 2, step: 0.1, bind: 'bA', onInput: rerenderBoth, showBounds: false, width: NARROW });
 
-sectionHeading('Hidden unit B');
-controls.slider({ label: 'Weight: Rocky -> B (wB1)', min: -2, max: 2, step: 0.1, bind: 'wB1', onInput: rerenderBoth });
-controls.slider({ label: 'Weight: Mr. T -> B (wB2)', min: -2, max: 2, step: 0.1, bind: 'wB2', onInput: rerenderBoth });
-controls.slider({ label: 'Bias B', min: -2, max: 2, step: 0.1, bind: 'bB', onInput: rerenderBoth });
+sectionHeading('Hidden B');
+controls.sliderPair(
+  { label: 'Rocky', min: -2, max: 2, step: 0.1, bind: 'wB1', onInput: rerenderBoth, width: NARROW },
+  { label: 'Mr. T', min: -2, max: 2, step: 0.1, bind: 'wB2', onInput: rerenderBoth, width: NARROW });
+controls.slider({ label: 'Bias', min: -2, max: 2, step: 0.1, bind: 'bB', onInput: rerenderBoth, showBounds: false, width: NARROW });
 
 sectionHeading('Output');
-controls.slider({ label: 'Weight: A -> output (vA)', min: -2, max: 2, step: 0.1, bind: 'vA', onInput: rerenderBoth });
-controls.slider({ label: 'Weight: B -> output (vB)', min: -2, max: 2, step: 0.1, bind: 'vB', onInput: rerenderBoth });
-controls.slider({ label: 'Bias (output)', min: -2, max: 2, step: 0.1, bind: 'bO', onInput: rerenderBoth });
+controls.sliderPair(
+  { label: 'A', min: -2, max: 2, step: 0.1, bind: 'vA', onInput: rerenderBoth, width: NARROW },
+  { label: 'B', min: -2, max: 2, step: 0.1, bind: 'vB', onInput: rerenderBoth, width: NARROW });
+controls.slider({ label: 'Bias', min: -2, max: 2, step: 0.1, bind: 'bO', onInput: rerenderBoth, showBounds: false, width: NARROW });
 
 rerenderBoth();

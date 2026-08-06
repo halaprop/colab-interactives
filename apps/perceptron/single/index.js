@@ -65,8 +65,9 @@ network.node({
   x: -5,
   y: 4,
   sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
-    self.text = `sunny: ${s.x1.toFixed(2)}`;
+    self.text = `Sunny\n${s.x1.toFixed(2)}`;
   },
 });
 
@@ -75,8 +76,9 @@ network.node({
   x: -5,
   y: -2,
   sizeKey: 'l',
+  textPlacement: 'middle',
   onChange: (s, self) => {
-    self.text = `work: ${s.x2.toFixed(2)}`;
+    self.text = `Work\n${s.x2.toFixed(2)}`;
   },
 });
 
@@ -85,9 +87,12 @@ network.node({
   x: 5,
   y: 0,
   sizeKey: 'l',
+  r: 50, // a bit bigger than sunny/work -- it carries two lines (verdict + sum), not one
+  textPlacement: 'middle',
   onChange: (s, self) => {
     self.cls = s.activation > 0 ? 'go' : 'nogo';
-    self.text = `beach? ${s.activation > 0 ? 'YES' : 'no'} (${s.sum.toFixed(2)})`;
+    self.textFill = '#fff';
+    self.text = `Beach?\n${s.sum.toFixed(2)}`;
   },
 });
 
@@ -102,7 +107,7 @@ network.edge({
   to: 'output',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `w1 = ${s.w1.toFixed(2)}`;
+    self.label = s.w1.toFixed(2);
     weightStyle(self, s.w1);
   },
 });
@@ -112,7 +117,7 @@ network.edge({
   to: 'output',
   arrow: true,
   onChange: (s, self) => {
-    self.label = `w2 = ${s.w2.toFixed(2)}`;
+    self.label = s.w2.toFixed(2);
     weightStyle(self, s.w2);
   },
 });
@@ -348,8 +353,8 @@ const rerenderBoth = () => {
 };
 
 const controls = Controls(controlsBody, state);
-controls.slider({ label: 'Sunny (x1)', min: -2, max: 2, step: 0.1, bind: 'x1', onInput: rerenderBoth });
-controls.slider({ label: 'Work (x2)', min: -2, max: 2, step: 0.1, bind: 'x2', onInput: rerenderBoth });
-controls.slider({ label: 'Weight: sunny -> output (w1)', min: -2, max: 2, step: 0.1, bind: 'w1', onInput: rerenderBoth });
-controls.slider({ label: 'Weight: work -> output (w2)', min: -2, max: 2, step: 0.1, bind: 'w2', onInput: rerenderBoth });
+controls.slider({ label: 'Sunny', min: -2, max: 2, step: 0.1, bind: 'x1', onInput: rerenderBoth });
+controls.slider({ label: 'Work', min: -2, max: 2, step: 0.1, bind: 'x2', onInput: rerenderBoth });
+controls.slider({ label: 'Weight: Sunny', min: -2, max: 2, step: 0.1, bind: 'w1', onInput: rerenderBoth });
+controls.slider({ label: 'Weight: Work', min: -2, max: 2, step: 0.1, bind: 'w2', onInput: rerenderBoth });
 controls.slider({ label: 'Bias', min: -2, max: 2, step: 0.1, bind: 'bias', onInput: rerenderBoth });
