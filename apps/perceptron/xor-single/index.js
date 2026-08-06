@@ -1,7 +1,7 @@
 /*
- * apps/xor-single/index.js
+ * apps/perceptron/xor-single/index.js
  *
- * The same single-neuron perceptron as apps/perceptron, pointed at a
+ * The same single-neuron perceptron as apps/perceptron/single, pointed at a
  * problem it can't solve. Two friends, Rocky and Mr. T: you like them
  * both, but they don't get along. "Good beach day" is XOR(invite Rocky,
  * invite Mr. T) -- true iff you invite exactly one (invite neither and
@@ -15,7 +15,7 @@
  * computed fresh from the current weights against all four truth-table
  * corners, that never reaches 4 no matter how the sliders are dragged.
  *
- * Structurally this is apps/perceptron with the labels/story swapped and
+ * Structurally this is apps/perceptron/single with the labels/story swapped and
  * the input-plane panel's single draggable point replaced by four fixed,
  * ground-truth-colored corners -- copied and adapted rather than
  * parameterized into the same file, since the two apps are demonstrating
@@ -23,7 +23,7 @@
  * one) and forcing them through one file would mean branching logic
  * inside what's meant to read as a single, linear story.
  */
-import { Diagram, Controls } from '../../lib/diagram.js';
+import { Diagram, Controls } from '../../../lib/diagram.js';
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 
 const root = document.querySelector('#app');

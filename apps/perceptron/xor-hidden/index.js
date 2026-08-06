@@ -1,7 +1,7 @@
 /*
- * apps/xor-hidden/index.js
+ * apps/perceptron/xor-hidden/index.js
  *
- * apps/xor-single showed one perceptron can't do Rocky/Mr. T's XOR: the
+ * apps/perceptron/xor-single showed one perceptron can't do Rocky/Mr. T's XOR: the
  * two "good day" corners of the input square are diagonal from each
  * other, and so are the two "bad day" corners, so no single straight
  * line separates them. This app adds a hidden layer -- two ReLU units
@@ -32,7 +32,7 @@
  * Each hidden unit's own boundary line is still drawn, unfilled, so the
  * two individual cuts that combine into the final shape stay visible.
  */
-import { Diagram, Controls } from '../../lib/diagram.js';
+import { Diagram, Controls } from '../../../lib/diagram.js';
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 
 const root = document.querySelector('#app');

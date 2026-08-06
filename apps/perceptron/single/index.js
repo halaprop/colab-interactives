@@ -1,5 +1,5 @@
 /*
- * apps/perceptron/index.js
+ * apps/perceptron/single/index.js
  *
  * "Should I go to the beach" as an actual single-neuron perceptron:
  * two input nodes (sunny, work) feed a weighted sum into an output node
@@ -16,7 +16,7 @@
  * primitives are deliberately deferred until a second use case asks for
  * one.
  */
-import { Diagram, Controls } from '../../lib/diagram.js';
+import { Diagram, Controls } from '../../../lib/diagram.js';
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 
 const root = document.querySelector('#app');

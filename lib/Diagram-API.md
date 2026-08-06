@@ -2,7 +2,7 @@
 
 Reference for `lib/diagram.js`. For complete working examples, see
 `apps/diagram-editor/index.js` (live construction, `editable()`) and
-`apps/perceptron/index.js` (reactive, `state`/`onChange`, multiple
+`apps/perceptron/single/index.js` (reactive, `state`/`onChange`, multiple
 Diagrams sharing state).
 
 Every writable prop below can be changed after creation too, two ways:
