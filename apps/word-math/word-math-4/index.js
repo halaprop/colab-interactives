@@ -80,7 +80,7 @@ root.innerHTML = `
       --border: rgba(11, 11, 11, 0.10);
       --accent: #2a78d6;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       width: 100%;
       box-sizing: border-box;
       background: var(--surface);
@@ -98,46 +98,46 @@ root.innerHTML = `
         --accent: #3987e5;
       }
     }
-    .word-math .viz-header {
+    .word-math .sidebar {
+      /* fixed dark panel, independent of light/dark theme, to match the
+         canvas's own fixed-dark background instead of popping against it */
+      color-scheme: dark;
+      --surface: #1a1a19;
+      --ink-primary: #ffffff;
+      --ink-secondary: #c3c2b7;
+      --border: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5;
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px 16px;
-      padding: 14px 24px;
-      border-bottom: 1px solid var(--border);
+      flex-direction: column;
+      flex-shrink: 0;
+      gap: 12px;
+      width: 160px;
+      box-sizing: border-box;
+      padding: 14px 8px;
+      background: var(--surface);
+      color: var(--ink-primary);
+      border-right: 1px solid var(--border);
     }
-    .word-math .viz-title {
-      font-size: 15px;
-      font-weight: 600;
-      margin-right: auto;
-    }
-    .word-math .viz-subtitle {
-      font-size: 12px;
-      color: var(--ink-muted);
-      width: 100%;
-      order: 3;
-    }
-    .word-math .scatter-btn,
-    .word-math .train-btn {
+    .word-math .action-btn {
       font: inherit;
       font-size: 13px;
       font-weight: 600;
       padding: 8px 16px;
       border-radius: 6px;
       cursor: pointer;
-    }
-    .word-math .scatter-btn {
+      width: 100%;
+      box-sizing: border-box;
       border: 1px solid var(--accent);
+    }
+    .word-math .action-btn.btn-primary {
       background: var(--accent);
       color: #fff;
     }
-    .word-math .train-btn {
-      border: 1px solid var(--accent);
+    .word-math .action-btn.btn-outline {
       background: transparent;
       color: var(--accent);
     }
-    .word-math .scatter-btn:active,
-    .word-math .train-btn:active {
+    .word-math .action-btn:active {
       opacity: 0.8;
     }
     .word-math .orbit-toggle {
@@ -154,15 +154,13 @@ root.innerHTML = `
       position: relative;
     }
   </style>
-  <div class="viz-header">
-    <span class="viz-title">Word Vectors in Training</span>
+  <div class="sidebar">
     <label class="orbit-toggle">
       <input type="checkbox" class="orbit-checkbox">
-      Auto-orbit
+      Orbit
     </label>
-    <button class="scatter-btn" type="button">Scatter</button>
-    <button class="train-btn" type="button">Train</button>
-    <span class="viz-subtitle">Click Scatter to spread the words randomly, then Train to watch them settle into clusters. Drag a word to nudge its cluster, drag the background to orbit, scroll to zoom, or click a word to focus its cluster.</span>
+    <button class="scatter-btn action-btn btn-primary" type="button">Scatter</button>
+    <button class="train-btn action-btn btn-outline" type="button">Train</button>
   </div>
   <div class="canvas-wrap"></div>
 `;
@@ -311,8 +309,14 @@ async function main() {
     graph.width(canvasWrap.clientWidth).height(canvasWrap.clientHeight);
   }).observe(canvasWrap);
 
-  scatterButton.addEventListener('click', () => scatter(nodes, graph));
-  trainButton.addEventListener('click', () => train(nodes, graph));
+  scatterButton.addEventListener('click', () => {
+    scatter(nodes, graph);
+    setPrimaryButton(trainButton, scatterButton);
+  });
+  trainButton.addEventListener('click', () => {
+    train(nodes, graph);
+    setPrimaryButton(scatterButton, trainButton);
+  });
   orbitCheckbox.addEventListener('change', () => {
     graph.enableNavigationControls(!orbitCheckbox.checked);
   });
@@ -623,6 +627,16 @@ function train(nodes, graph) {
     node.fz = undefined;
   }
   graph.d3ReheatSimulation();
+}
+
+// styles `primary` as the suggested next action (filled) and `secondary` as
+// already-done (outline) - swapped on every Scatter/Train click so the
+// filled button always points at what makes sense to do next
+function setPrimaryButton(primary, secondary) {
+  primary.classList.add('btn-primary');
+  primary.classList.remove('btn-outline');
+  secondary.classList.add('btn-outline');
+  secondary.classList.remove('btn-primary');
 }
 
 // pans the camera to look at a point, positioned outward along the same ray
