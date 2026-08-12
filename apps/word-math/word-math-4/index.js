@@ -38,8 +38,6 @@ const ORBIT_PERIOD_MS = 100000;
 const FOCUS_DISTANCE = 220;   // camera distance when focusing on a clicked cluster
 const FOCUS_TRANSITION_MS = 1000;
 
-const ORIGIN_LINE_SAMPLE_RATE = 0.18;
-
 const KMEANS_MAX_ITERS = 50;
 
 const LABEL_SECONDARY_TEXT_HEIGHT = 5;
@@ -150,15 +148,6 @@ root.innerHTML = `
       color: var(--ink-secondary);
       cursor: pointer;
     }
-    .word-math .origin-select {
-      font: inherit;
-      font-size: 13px;
-      padding: 7px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--ink-primary);
-    }
     .word-math .canvas-wrap {
       flex: 1;
       min-height: 0;
@@ -171,11 +160,6 @@ root.innerHTML = `
       <input type="checkbox" class="orbit-checkbox">
       Auto-orbit
     </label>
-    <select class="origin-select">
-      <option value="sample" selected>Origin lines: sample</option>
-      <option value="all">Origin lines: all</option>
-      <option value="none">Origin lines: none</option>
-    </select>
     <button class="scatter-btn" type="button">Scatter</button>
     <button class="train-btn" type="button">Train</button>
     <span class="viz-subtitle">Click Scatter to spread the words randomly, then Train to watch them settle into clusters. Drag a word to nudge its cluster, drag the background to orbit, scroll to zoom, or click a word to focus its cluster.</span>
@@ -186,7 +170,6 @@ root.innerHTML = `
 const canvasWrap = root.querySelector('.canvas-wrap');
 const scatterButton = root.querySelector('.scatter-btn');
 const trainButton = root.querySelector('.train-btn');
-const originSelect = root.querySelector('.origin-select');
 const orbitCheckbox = root.querySelector('.orbit-checkbox');
 
 main();
@@ -198,8 +181,6 @@ async function main() {
   pcaLoci(clusters);
   const nodes = buildNodes(clusters);
 
-  let originMode = 'sample';
-
   const originGeometry = new THREE.BufferGeometry();
   const originPositions = new Float32Array(nodes.length * 2 * 3);
   originGeometry.setAttribute('position', new THREE.BufferAttribute(originPositions, 3));
@@ -208,17 +189,10 @@ async function main() {
 
   function updateOriginLines() {
     nodes.forEach((n, i) => {
-      const active = originMode === 'all' || (originMode === 'sample' && n.hasOriginLine);
       const base = i * 6;
-      if (active) {
-        originPositions[base] = 0;
-        originPositions[base + 1] = 0;
-        originPositions[base + 2] = 0;
-      } else {
-        originPositions[base] = n.x;
-        originPositions[base + 1] = n.y;
-        originPositions[base + 2] = n.z;
-      }
+      originPositions[base] = 0;
+      originPositions[base + 1] = 0;
+      originPositions[base + 2] = 0;
       originPositions[base + 3] = n.x;
       originPositions[base + 4] = n.y;
       originPositions[base + 5] = n.z;
@@ -339,10 +313,6 @@ async function main() {
 
   scatterButton.addEventListener('click', () => scatter(nodes, graph));
   trainButton.addEventListener('click', () => train(nodes, graph));
-  originSelect.addEventListener('change', () => {
-    originMode = originSelect.value;
-    updateOriginLines();
-  });
   orbitCheckbox.addEventListener('change', () => {
     graph.enableNavigationControls(!orbitCheckbox.checked);
   });
@@ -568,7 +538,6 @@ function buildNodes(clusters) {
         prototypeColor: cluster.prototypeColor,
         isPrototype,
         hasLabel: isPrototype || (mi > 0 && mi % LABEL_EVERY_N === 0),
-        hasOriginLine: Math.random() < ORIGIN_LINE_SAMPLE_RATE,
         x: 0,
         y: 0,
         z: 0,
