@@ -41,3 +41,23 @@ shim.show(app='hello')
 
 The cell renders "Hello, World!".
 
+## Exhibits
+
+Screenshots of apps live in `exhibits/`, committed as plain PNGs. Once
+pushed, embed one in Markdown (this README, a PR description, etc.) as a
+hosted image via its `raw.githubusercontent.com` URL:
+
+```html
+<img src="https://raw.githubusercontent.com/halaprop/colab-interactives/main/exhibits/<name>.png" width="500">
+```
+
+A few other `<img>` attributes worth knowing about:
+
+- `alt="..."` -- fallback/accessibility text, shown if the image fails to load.
+- `height="..."` -- set instead of (not in addition to) `width` to avoid
+  distorting the aspect ratio, unless the two values are already proportional.
+- `title="..."` -- tooltip text on hover.
+- `align="right"` (or `left`) -- floats the image beside adjacent text;
+  still respected in GitHub-flavored Markdown despite being deprecated
+  HTML, since GFM doesn't reliably render flexbox/grid layouts.
+
