@@ -585,6 +585,7 @@ let scatterToken = 0; // invalidates an in-flight tween if Scatter is clicked ag
 function scatter(nodes, graph) {
   const myToken = ++scatterToken;
   graph.enableNodeDrag(false); // dragging only makes sense once Train has formed a cluster to nudge
+  resetRotationCenter(graph); // a pivot left over from a previously clicked node no longer means anything once its cluster is gone
 
   const starts = nodes.map((n) => ({ x: n.x, y: n.y, z: n.z }));
   const ends = nodes.map(() => randomPointInSphere(SCATTER_RADIUS));
@@ -646,6 +647,12 @@ function focusOnPoint(graph, t) {
   const distRatio = 1 + FOCUS_DISTANCE / (Math.hypot(t.x, t.y, t.z) || 1);
   const newPos = { x: t.x * distRatio, y: t.y * distRatio, z: t.z * distRatio };
   graph.cameraPosition(newPos, t, FOCUS_TRANSITION_MS);
+}
+
+// re-centers drag-orbit/scroll-zoom on the origin without moving the camera
+// itself - just repoints its lookAt/pivot, same mechanism focusOnPoint uses
+function resetRotationCenter(graph) {
+  graph.cameraPosition(graph.cameraPosition(), { x: 0, y: 0, z: 0 }, FOCUS_TRANSITION_MS);
 }
 
 function startCameraOrbit(graph, orbitCheckbox) {
