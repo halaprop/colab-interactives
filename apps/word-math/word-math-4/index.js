@@ -43,6 +43,7 @@ const KMEANS_MAX_ITERS = 50;
 const LABEL_SECONDARY_TEXT_HEIGHT = 5;
 const LABEL_PROTOTYPE_TEXT_HEIGHT = 8;
 const LABEL_PROTOTYPE_FONT_WEIGHT = 'bold';
+const LABEL_Y_OFFSET = 7; // clears the node ball's surface (radius ~4) with room to spare
 
 // closed-class function words - excluded so clustering runs over meaningful
 // content words instead of grammatical glue
@@ -570,7 +571,7 @@ function makeLabelSprite(node) {
     sprite.textHeight = LABEL_SECONDARY_TEXT_HEIGHT;
   }
   sprite.material.depthWrite = false;
-  sprite.position.set(0, 4, 0);
+  sprite.position.set(0, LABEL_Y_OFFSET, 0);
   return sprite;
 }
 
