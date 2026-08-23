@@ -101,7 +101,7 @@ root.innerHTML = `
       display: flex;
     }
     .word-math .strip-cell {
-      width: 8px;
+      width: 5px;
       height: 36px;
     }
     .word-math .also-close {
@@ -112,7 +112,7 @@ root.innerHTML = `
       margin-top: 2px;
     }
   </style>
-  <div class="hint-line">type an expression like car + pull</div>
+  <div class="hint-line">type an expression like: daughter - girl + boy</div>
   <input class="word-input" type="text" placeholder="word + word" autocomplete="off" spellcheck="false" />
   <div class="status-line"></div>
   <div class="equation"></div>

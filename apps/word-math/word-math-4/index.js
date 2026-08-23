@@ -439,7 +439,7 @@ function sqDist(a, b) {
 }
 
 // hand-rolled PCA (power iteration + deflation) - the cluster set is tiny
-// (k centroids x 50 dims), so a full library is unwarranted
+// (k centroids x 100 dims), so a full library is unwarranted
 function pcaLoci(clusters) {
   const dims = clusters[0].centroid.length;
   const k = clusters.length;

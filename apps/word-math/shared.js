@@ -1,11 +1,13 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 
 // assumes the caller lives one level below apps/word-math/ (e.g.
-// apps/word-math/word-math-0/index.js), matching every app in this family
-export async function loadFixture(callerUrl) {
+// apps/word-math/word-math-0/index.js), matching every app in this family.
+// `name` selects which data/<name>.json + .bin pair to load, e.g. pass
+// 'word2vec-fixture-300' for the 300d variant.
+export async function loadFixture(callerUrl, name = 'word2vec-fixture') {
   const [meta, buf] = await Promise.all([
-    fetch(new URL('../data/word2vec-fixture.json', callerUrl)).then((r) => r.json()),
-    fetch(new URL('../data/word2vec-fixture.bin', callerUrl)).then((r) => r.arrayBuffer()),
+    fetch(new URL(`../data/${name}.json`, callerUrl)).then((r) => r.json()),
+    fetch(new URL(`../data/${name}.bin`, callerUrl)).then((r) => r.arrayBuffer()),
   ]);
   const { words, dims } = meta;
   const table = new Float32Array(buf);

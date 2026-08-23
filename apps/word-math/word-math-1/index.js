@@ -134,7 +134,7 @@ root.innerHTML = `
       display: flex;
     }
     .word-math .strip-cell {
-      width: 8px;
+      width: 5px;
       height: 36px;
     }
     .word-math .strip.result .strip-cell:first-child {
