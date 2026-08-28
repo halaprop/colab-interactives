@@ -464,8 +464,8 @@ const PLANE_MAX = 1.6;
 const inputSpacePlane = inputSpace.plane({
   xDomain: [PLANE_MIN, PLANE_MAX],
   yDomain: [PLANE_MIN, PLANE_MAX],
-  xLabel: 'invite Rocky (x1)',
-  yLabel: 'invite Mr. T (x2)',
+  xLabel: 'invite Rocky',
+  yLabel: 'invite Mr. T',
   xTicks: [0, 1],
   yTicks: [0, 1],
   grid: true,

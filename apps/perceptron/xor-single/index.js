@@ -321,8 +321,8 @@ const inputSpace = Diagram(inputSpaceEl, { state });
 inputSpace.plane({
   xDomain: [-0.6, 1.6],
   yDomain: [-0.6, 1.6],
-  xLabel: 'invite Rocky (x1)',
-  yLabel: 'invite Mr. T (x2)',
+  xLabel: 'invite Rocky',
+  yLabel: 'invite Mr. T',
   xTicks: [0, 1],
   yTicks: [0, 1],
   grid: true,

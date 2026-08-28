@@ -280,8 +280,8 @@ const inputSpace = Diagram(inputSpaceEl, { state });
 inputSpace.plane({
   xDomain: [-2, 2],
   yDomain: [-2, 2],
-  xLabel: 'sunny (x1)',
-  yLabel: 'work (x2)',
+  xLabel: 'sunny',
+  yLabel: 'work',
   grid: true,
 });
 
