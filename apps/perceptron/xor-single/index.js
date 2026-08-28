@@ -323,6 +323,8 @@ inputSpace.plane({
   yDomain: [-0.6, 1.6],
   xLabel: 'invite Rocky (x1)',
   yLabel: 'invite Mr. T (x2)',
+  xTicks: [0, 1],
+  yTicks: [0, 1],
   grid: true,
 });
 

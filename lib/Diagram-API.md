@@ -84,6 +84,9 @@ Example: axis-less, for a pure node/edge network
   is 1:1 pixels. y always grows up regardless.
 - `xLabel`, `yLabel` — string, optional.
 - `grid` — boolean, default `false`.
+- `xTicks`, `yTicks` — array of explicit tick positions (e.g. `[0, 1]`),
+  optional. Replaces d3's automatic ticks on that axis; grid lines (when
+  `grid` is on) follow the same positions.
 - `axes` — boolean, default `true`. `false` hides the axis lines/ticks
   entirely (labels still render if set).
 - `bands` — array of tinted rectangles: `{x0, x1, fill, opacity}`
