@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Diagram Harness</title>
+    <title>harness</title>
     <style>
       html,
       body {
@@ -18,28 +18,32 @@
   <body>
     <div id="app"></div>
 
-    <!-- Loads apps/<name>/index.js as a module; its own import statements
-         pull in everything else (lib files, D3 from an ESM CDN URL), same
-         as the Colab shim, so "looks right locally" == "looks right in
-         Colab". -->
+    <!-- Loads apps/<name>/index.js, named by ?app=, as a module; its own
+         import statements pull in everything else (lib files, D3 from an
+         ESM CDN URL), same as the Colab shim, so "looks right locally" ==
+         "looks right in Colab". -->
     <script>
-      const params = new URLSearchParams(location.search);
-      const app = params.get('app') || 'diagram-editor';
-      const entryPath = `apps/${app}/index.js`;
+      const app = new URLSearchParams(location.search).get('app');
 
-      // Default tab title is the app folder's last path component (e.g.
-      // "idea0" for tictactoe/idea0); index.js can override by setting
-      // document.title itself, since it runs after this.
-      document.title = app.split('/').pop();
+      if (!app) {
+        console.log('no app specified -- add ?app=<name>, e.g. ?app=tictactoe/idea0');
+      } else {
+        const entryPath = `apps/${app}/index.js`;
 
-      const s = document.createElement('script');
-      s.type = 'module';
-      s.src = `/${entryPath}`;
-      s.onerror = () => {
-        console.error('failed to load', s.src);
-        document.getElementById('app').textContent = `error: ${entryPath} not found`;
-      };
-      document.body.appendChild(s);
+        // Tab title is the app folder's last path component (e.g. "idea0"
+        // for tictactoe/idea0); index.js runs after this and can set
+        // document.title itself.
+        document.title = app.split('/').pop();
+
+        const s = document.createElement('script');
+        s.type = 'module';
+        s.src = `/${entryPath}`;
+        s.onerror = () => {
+          console.error('failed to load', s.src);
+          document.getElementById('app').textContent = `error: ${entryPath} not found`;
+        };
+        document.body.appendChild(s);
+      }
     </script>
   </body>
 </html>

@@ -2,12 +2,44 @@
 
 Run JS apps in a Google Colab cell with almost no code in the notebook.
 
- - Paste `bootstrap.py` into your notebook's first cell, filling in `GITHUB_USER`/`GITHUB_REPO`/`REF` for this repo (or your fork).
- - Every other cell can call `shim.show(app=...)`.
- - The `app` param refers to a subpath in the apps folder of this repo, and requires an `index.js` file as its entry point, loaded as an ES module.
- - Dependencies -- CDN-hosted libs or a path within this repo, e.g. `lib/diagram.js` -- are declared with ordinary `import` statements inside `index.js`, no separate manifest.
- - The shim assembles an HTML doc with one `<script type="module">` importing the app's entry point, and an `#app` div, upon which the DOM can be built.
- - Everything is fetched from your repo via jsDelivr.
+Cell 1 of the notebook fetches and runs `bootstrap.py`, which pulls
+`shim.py` down and imports it as `shim`:
+
+```python
+import urllib.request
+exec(urllib.request.urlopen('https://raw.githubusercontent.com/halaprop/colab-interactives/main/bootstrap.py').read())
+```
+
+Every other cell is one line:
+
+```python
+shim.show(app='perceptron/single')
+```
+
+- `app` is a subpath under `apps/` in this repo, and needs an `index.js`
+  as its entry point, loaded as an ES module.
+- The shim assembles an HTML doc with one `<script type="module">`
+  importing the app's entry point, and an `#app` div, upon which the DOM
+  can be built.
+- App files are fetched from the repo via jsDelivr; `bootstrap.py` and
+  `shim.py` themselves come from `raw.githubusercontent.com`.
+
+`show()` takes two more optional params: `ref=` (a branch, tag, or commit
+sha, overriding the `REF` the bootstrap cell set) and `height=` (pixel
+height of the `#app` div, default 650).
+
+## Using a different fork
+
+`bootstrap.py` is the single place to point everything at a different
+repo. Two edits, both in that file:
+
+- the `raw.githubusercontent.com` URL it fetches `shim.py` from, and
+- the `shim.GITHUB_USER, shim.GITHUB_REPO, shim.REF = ...` line, which
+  overwrites `shim.py`'s own copies of those constants right after import.
+
+Then use the other fork's `bootstrap.py` URL in cell 1. The matching
+constants at the top of `shim.py` apply when it's imported directly,
+without the bootstrap cell.
 
 ## Hello World
 
@@ -31,15 +63,48 @@ export function sayHello(container, name) {
 }
 ```
 
-Push those two files to GitHub. Then, in a Colab notebook: paste
-`bootstrap.py` into cell 1 (with your `GITHUB_USER`/`GITHUB_REPO`/`REF`
-filled in), and in cell 2:
+Push those two files to GitHub. Then, in a Colab notebook: the bootstrap
+cell above, and in cell 2:
 
 ```python
 shim.show(app='hello')
 ```
 
 The cell renders "Hello, World!".
+
+## Running an app locally
+
+`harness/index.html` builds the same page `shim.py` does -- an `#app`
+div and one `<script type="module">` -- so apps run locally:
+
+```bash
+npm install
+npm run dev
+```
+
+Vite prints a local URL. Name the app with `?app=<name>`, the same name
+`shim.show()` takes, for example:
+
+```
+http://localhost:5173/harness/index.html?app=tictactoe/idea0
+```
+
+Editing `apps/<name>/index.js` or anything under `lib/` reloads the page.
+
+Gotcha: the harness sizes `#app` with `height: 100vh`, the shim with a
+pixel height. Leave that height alone in app code -- a percentage height
+on `#app` renders fine here and collapses to ~150px in Colab.
+
+## Repo layout
+
+- `apps/<name>/index.js` -- one app per folder; nested paths (e.g.
+  `apps/tictactoe/idea0/`) are fine.
+- `lib/` -- shared code imported by more than one app: `diagram.js` (the
+  D3 diagram library, documented in `lib/Diagram-API.md`), `tictactoe.js`
+  (board and rules for the `tictactoe/idea*` series), `hello.js`.
+- `harness/index.html`, `vite.config.js` -- the local dev harness above.
+- `shim.py`, `bootstrap.py` -- the Colab side.
+- `exhibits/` -- screenshots, see below.
 
 ## Exhibits
 
@@ -60,4 +125,3 @@ A few other `<img>` attributes worth knowing about:
 - `align="right"` (or `left`) -- floats the image beside adjacent text;
   still respected in GitHub-flavored Markdown despite being deprecated
   HTML, since GFM doesn't reliably render flexbox/grid layouts.
-
