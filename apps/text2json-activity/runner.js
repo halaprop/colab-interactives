@@ -39,6 +39,31 @@ function insertAtCursor(el, text) {
   }
 }
 
+// A data block's raw content may itself be JSON. A single key/value pair
+// collapses to one line so it reads inline in a prompt; anything richer
+// (more keys, arrays, nesting) is pretty-printed instead. Non-JSON text
+// is left untouched.
+function formatContent(raw) {
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { return raw; }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return raw;
+  const keys = Object.keys(parsed);
+  if (keys.length === 1) return `{ ${keys[0]}: ${JSON.stringify(parsed[keys[0]])} }`;
+  return JSON.stringify(parsed, null, 2);
+}
+
+// Separates the inserted ${name} from whatever's already at the cursor:
+// a newline if the content is multiline, a single space otherwise, and
+// only on whichever side actually has adjacent non-whitespace text.
+function insertPlaceholder(el, name, content) {
+  const sep = content.includes('\n') ? '\n' : ' ';
+  const before = el.value.slice(0, el.selectionStart);
+  const after = el.value.slice(el.selectionEnd);
+  const prefix = before && !/\s$/.test(before) ? sep : '';
+  const suffix = after && !/^\s/.test(after) ? sep : '';
+  insertAtCursor(el, `${prefix}\${${name}}${suffix}`);
+}
+
 const STYLE = `
 <style>
   .text2json {
@@ -56,7 +81,6 @@ const STYLE = `
     flex-direction: column;
     gap: 16px;
     width: 100%;
-    height: 100%;
     box-sizing: border-box;
     overflow-y: auto;
     padding: 24px;
@@ -241,14 +265,14 @@ export function mount(data) {
   dataPreview.innerHTML = dataBlocks.map((b) => `
     <div class="data-preview-item">
       <div class="label">${escapeHtml(b.label || '(untitled)')}</div>
-      <div class="content">${escapeHtml(b.content)}</div>
+      <div class="content">${escapeHtml(formatContent(b.content))}</div>
     </div>
   `).join('');
 
   // ---------- insert toolbar + ${name} placeholder expansion ----------
   function getInsertables() {
     const map = { chat: transcriptText() };
-    dataBlocks.forEach((b) => { if (b.label && b.label.trim()) map[b.label.trim()] = b.content; });
+    dataBlocks.forEach((b) => { if (b.label && b.label.trim()) map[b.label.trim()] = formatContent(b.content); });
     return map;
   }
 
@@ -258,7 +282,7 @@ export function mount(data) {
     const btn = document.createElement('button');
     btn.className = 'chip';
     btn.textContent = label;
-    btn.onclick = () => insertAtCursor(composer, `\n\${${name}}\n`);
+    btn.onclick = () => insertPlaceholder(composer, name, getInsertables()[name] || '');
     toolbar.appendChild(btn);
   };
   addBtn('Insert chat', 'chat');

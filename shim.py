@@ -43,6 +43,13 @@ def resolve_ref(ref):
 
 
 def show(app, ref=None, height=650):
+    # a bare number is shorthand for pixels (unchanged default behavior);
+    # a string is passed straight through as a CSS height, e.g. '50vh' or
+    # 'auto' -- confirmed against real Colab output that content sizing
+    # itself via plain CSS (no fixed height on #app) reflows the output
+    # area correctly, no special API needed.
+    height_css = f'{height}px' if isinstance(height, (int, float)) else str(height)
+
     base = f'https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{resolve_ref(ref or REF)}'
     entry = f'apps/{app}/index.js'
     src = f'{base}/{entry}'
@@ -75,4 +82,4 @@ def show(app, ref=None, height=650):
     </script>'''
 
     display(HTML(f'<style>body{{margin:0}}</style>'
-                  f'<div id="app" style="width:100%;height:{height}px;"></div>{script}'))
+                  f'<div id="app" style="width:100%;height:{height_css};"></div>{script}'))
