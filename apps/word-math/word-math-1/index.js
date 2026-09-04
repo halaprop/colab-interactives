@@ -70,7 +70,7 @@ root.innerHTML = `
       font-style: italic;
     }
     .word-math .dims-line {
-      font-size: 13px;
+      font-size: 16px;
       color: var(--ink-muted);
       min-height: 1.2em;
     }
@@ -94,6 +94,8 @@ root.innerHTML = `
     }
     .word-math .neighbor-word {
       font-weight: 600;
+      color: var(--accent);
+      text-decoration: underline;
     }
     .word-math .neighbor-vector {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -263,7 +265,7 @@ async function main() {
       query = { word, vec };
       vectorLine.classList.remove('oov');
       vectorLine.textContent = formatVector(vec);
-      dimsLine.textContent = 'select a nearby word to see the difference';
+      dimsLine.innerHTML = '<br>select a nearby word to see the difference';
 
       neighbors = words
         .map((w, j) => ({ word: w, vec: table.subarray(j * dims, (j + 1) * dims) }))
