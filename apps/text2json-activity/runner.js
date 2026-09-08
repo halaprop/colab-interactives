@@ -304,19 +304,18 @@ const STYLE = `
     resize: vertical;
     box-sizing: border-box;
   }
-  .text2json textarea.response {
-    width: 100%;
-    min-height: 120px;
+  .text2json .response-pane {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
-    padding: 8px;
+    white-space: pre-wrap;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: var(--surface);
-    color: var(--ink-primary);
-    resize: vertical;
-    box-sizing: border-box;
+    padding: 8px;
+    min-height: 100px;
+    outline: none;
   }
+  .text2json .response-pane:focus { border-color: var(--accent); }
   .text2json .row { display: flex; gap: 8px; margin-top: 8px; }
   .text2json button.btn {
     font-family: inherit;
@@ -358,7 +357,10 @@ const TEMPLATE = `
 </div>
 <div class="panel">
   <h2>Response</h2>
-  <textarea class="response" placeholder="After you get an LLM result, paste it here"></textarea>
+  <div class="response-pane" tabindex="0">—</div>
+  <div class="row">
+    <button class="btn ghost paste-response">After you get an LLM result, click here and paste it</button>
+  </div>
   <p class="caption">Adds the result to the transcript of this activity.</p>
   <div class="row">
     <button class="btn primary download" disabled>If the result looks correct, download a copy for mailing</button>
@@ -461,9 +463,15 @@ export function mount(data) {
   }
 
   // ---------- response + download ----------
-  const response = root.querySelector('.response');
+  const responsePane = root.querySelector('.response-pane');
+  const pasteBtn = root.querySelector('.paste-response');
   const downloadBtn = root.querySelector('.download');
   const copyBtn = root.querySelector('.copy-prompt');
+
+  function setResponse(text, downloadable) {
+    responsePane.textContent = text;
+    downloadBtn.disabled = !downloadable;
+  }
 
   copyBtn.onclick = async () => {
     const { expanded, errors } = parseAndExpand(composer.value);
@@ -479,12 +487,24 @@ export function mount(data) {
     }
   };
 
-  // A native paste needs no permission; the event carries the text.
-  response.addEventListener('paste', (e) => {
+  // The page can't read the clipboard in Colab's frame (permissions
+  // policy), but a native ⌘V/Ctrl-V still fires a paste event on the
+  // focused element, editable or not, with the text attached. The button
+  // puts focus on the pane and asks for the keystroke; any paste inside
+  // the activity other than into the composer replaces the response.
+  pasteBtn.onclick = () => {
+    responsePane.focus();
+    flash(pasteBtn, 'Now press ⌘V / Ctrl-V', 4000);
+  };
+  root.addEventListener('paste', (e) => {
+    if (e.target === composer) return;
     const text = e.clipboardData && e.clipboardData.getData('text');
-    if (text) logEvent({ k: 'llm2', r: text });
+    if (!text) return;
+    e.preventDefault();
+    setResponse(text, true);
+    logEvent({ k: 'llm2', r: text });
+    flash(pasteBtn, 'Pasted');
   });
-  response.addEventListener('input', () => { downloadBtn.disabled = !response.value.trim(); });
 
   downloadBtn.onclick = async () => {
     const { expanded, errors } = parseAndExpand(composer.value);
@@ -492,7 +512,7 @@ export function mount(data) {
       alert('Cannot download — fix these first:\n\n' + errors.map((e) => '• ' + e).join('\n'));
       return;
     }
-    const response = root.querySelector('.response').value;
+    const response = downloadBtn.disabled ? '' : responsePane.textContent;
     const j = parseJsonLoose(response);
     const payload = {
       v: 1,
