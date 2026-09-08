@@ -6,6 +6,8 @@ Cell 1 of the notebook fetches and runs `bootstrap.py`, which pulls
 `shim.py` down and imports it as `shim`:
 
 ```python
+# @title
+# This code enables the interactive elements on this page. It can be disregarded.
 import urllib.request
 exec(urllib.request.urlopen('https://raw.githubusercontent.com/halaprop/colab-interactives/main/bootstrap.py').read())
 ```
