@@ -76,8 +76,9 @@ const STYLE = `
     --ink-muted: #898781;
     --accent: #a5462f;
     --accent-ink: #ffffff;
-    --bubble: #0b93f6;
-    --bubble-ink: #ffffff;
+    --bubble: #eef5ff;
+    --bubble-ink: #0b0b0b;
+    --bubble-line: #0b0b0b;
     --go: #2fa84f;
     display: flex;
     flex-direction: column;
@@ -102,7 +103,9 @@ const STYLE = `
       --ink-muted: #898781;
       --accent: #d97a5e;
       --accent-ink: #1a1a19;
-      --bubble: #1a8cf0;
+      --bubble: #1f2a3a;
+      --bubble-ink: #ffffff;
+      --bubble-line: #c3c2b7;
     }
   }
   .text2json .header h1 { margin: 0 0 4px; font-size: 20px; }
@@ -127,35 +130,37 @@ const STYLE = `
     position: relative;
     background: var(--bubble);
     color: var(--bubble-ink);
-    border-radius: 16px;
+    border: 1px solid var(--bubble-line);
+    border-radius: 16px 16px 16px 4px;
     padding: 7px 12px;
-    margin-left: 6px;
+    margin-left: 8px;
     max-width: 85%;
     align-self: flex-start;
     font-size: 13px;
     white-space: pre-wrap;
   }
-  /* Tail: a bubble-colored blob at the bottom-left corner, with a
-     panel-colored blob over its outer half leaving a curved point. */
-  .text2json .chat-bubble::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: -7px;
-    width: 20px;
-    height: 18px;
-    background: var(--bubble);
-    border-bottom-right-radius: 15px;
-  }
+  /* Tail: two border-drawn triangles pointing left. ::before is the
+     outline; ::after is the fill, 1px smaller and shifted a pixel into
+     the bubble so its base covers the bubble's own left border. */
+  .text2json .chat-bubble::before,
   .text2json .chat-bubble::after {
     content: '';
     position: absolute;
-    bottom: 0;
-    left: -10px;
-    width: 10px;
-    height: 18px;
-    background: var(--panel);
-    border-bottom-right-radius: 10px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+  }
+  .text2json .chat-bubble::before {
+    bottom: 2px;
+    left: -8px;
+    border-width: 7px 8px 7px 0;
+    border-color: transparent var(--bubble-line) transparent transparent;
+  }
+  .text2json .chat-bubble::after {
+    bottom: 3px;
+    left: -6px;
+    border-width: 6px 8px 6px 0;
+    border-color: transparent var(--bubble) transparent transparent;
   }
   .text2json .data-preview-item { margin-bottom: 10px; }
   .text2json .data-preview-item:last-child { margin-bottom: 0; }
