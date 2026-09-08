@@ -100,6 +100,31 @@ export function matches(answer, expected) {
   return stableStringify(normalize(answer)) === stableStringify(normalize(expected));
 }
 
+// The async clipboard API needs a permission that sandboxed iframes
+// (Colab's output frame in Chrome) don't get; execCommand('copy') on a
+// selected textarea still works there on a click.
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* fall through */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { /* ok stays false */ }
+  ta.remove();
+  return ok;
+}
+
+// Swaps a button's label for a moment, then restores it.
+function flash(btn, label, ms = 1500) {
+  const orig = btn.dataset.label || (btn.dataset.label = btn.textContent);
+  btn.textContent = label;
+  clearTimeout(btn._flash);
+  btn._flash = setTimeout(() => { btn.textContent = orig; }, ms);
+}
+
 function insertAtCursor(el, text) {
   el.focus();
   const ok = document.execCommand && document.execCommand('insertText', false, text);
@@ -279,15 +304,18 @@ const STYLE = `
     resize: vertical;
     box-sizing: border-box;
   }
-  .text2json .response-pane {
+  .text2json textarea.response {
+    width: 100%;
+    min-height: 120px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
-    white-space: pre-wrap;
-    background: var(--surface);
+    padding: 8px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 8px;
-    min-height: 100px;
+    background: var(--surface);
+    color: var(--ink-primary);
+    resize: vertical;
+    box-sizing: border-box;
   }
   .text2json .row { display: flex; gap: 8px; margin-top: 8px; }
   .text2json button.btn {
@@ -330,10 +358,7 @@ const TEMPLATE = `
 </div>
 <div class="panel">
   <h2>Response</h2>
-  <div class="response-pane">—</div>
-  <div class="row">
-    <button class="btn ghost paste-response">After you get an LLM result, paste it here</button>
-  </div>
+  <textarea class="response" placeholder="After you get an LLM result, paste it here"></textarea>
   <p class="caption">Adds the result to the transcript of this activity.</p>
   <div class="row">
     <button class="btn primary download" disabled>If the result looks correct, download a copy for mailing</button>
@@ -436,33 +461,30 @@ export function mount(data) {
   }
 
   // ---------- response + download ----------
-  const responsePane = root.querySelector('.response-pane');
+  const response = root.querySelector('.response');
   const downloadBtn = root.querySelector('.download');
+  const copyBtn = root.querySelector('.copy-prompt');
 
-  function setResponse(text, downloadable) {
-    responsePane.textContent = text;
-    downloadBtn.disabled = !downloadable;
-  }
-
-  root.querySelector('.copy-prompt').onclick = async () => {
+  copyBtn.onclick = async () => {
     const { expanded, errors } = parseAndExpand(composer.value);
     if (errors.length) {
       alert('Cannot copy — fix these first:\n\n' + errors.map((e) => '• ' + e).join('\n'));
       return;
     }
-    await navigator.clipboard.writeText(expanded);
-    logEvent({ k: '2llm', p: expanded });
-  };
-
-  root.querySelector('.paste-response').onclick = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setResponse(text || '(clipboard was empty)', !!text);
-      if (text) logEvent({ k: 'llm2', r: text });
-    } catch (e) {
-      alert('Could not read the clipboard: ' + e.message);
+    if (await copyText(expanded)) {
+      flash(copyBtn, 'Copied');
+      logEvent({ k: '2llm', p: expanded });
+    } else {
+      flash(copyBtn, 'Copy failed — select the text and copy it yourself', 4000);
     }
   };
+
+  // A native paste needs no permission; the event carries the text.
+  response.addEventListener('paste', (e) => {
+    const text = e.clipboardData && e.clipboardData.getData('text');
+    if (text) logEvent({ k: 'llm2', r: text });
+  });
+  response.addEventListener('input', () => { downloadBtn.disabled = !response.value.trim(); });
 
   downloadBtn.onclick = async () => {
     const { expanded, errors } = parseAndExpand(composer.value);
@@ -470,7 +492,7 @@ export function mount(data) {
       alert('Cannot download — fix these first:\n\n' + errors.map((e) => '• ' + e).join('\n'));
       return;
     }
-    const response = responsePane.textContent;
+    const response = root.querySelector('.response').value;
     const j = parseJsonLoose(response);
     const payload = {
       v: 1,
