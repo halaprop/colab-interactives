@@ -35,4 +35,10 @@ mount({
   dataBlocks: [
     { label: 'reservation', content: 'Pinecrest Cabin #4\nFri Oct 16 - Sun Oct 18 (2 nights)\nSleeps 8\nDeposit paid: $600 (Noor)\nBalance $900 due at check-in' },
   ],
+  expected: {
+    confirmed: ['Noor', 'Tasha', 'Jules', 'Ben', 'Kai', 'Marco'],
+    not_confirmed: ['Dev', 'Priya', "Kai's cousin"],
+    owes_noor: { Tasha: 120, Jules: 120, Kai: 120, Ben: 20, Marco: 0 },
+    total_due_to_noor: 380,
+  },
 });

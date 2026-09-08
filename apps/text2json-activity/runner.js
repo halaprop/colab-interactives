@@ -28,6 +28,78 @@ function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'challenge';
 }
 
+// ---------- result file: session log, canonical form, checksum ----------
+// The downloaded file carries the whole session (every prompt copied,
+// every response pasted) plus a checksum over its canonical form. The
+// session persists in localStorage where available so a re-run of the
+// Colab cell continues the same log; otherwise it lives for one render.
+const REV = 'r7c2e4a1';
+
+function randomId() {
+  const b = new Uint8Array(6);
+  crypto.getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+function loadSession(key) {
+  try {
+    const s = JSON.parse(localStorage.getItem(key));
+    if (s && typeof s.sid === 'string' && typeof s.t0 === 'number' && Array.isArray(s.log)) return s;
+  } catch { /* no storage, or nothing usable in it */ }
+  return null;
+}
+
+function saveSession(key, s) {
+  try { localStorage.setItem(key, JSON.stringify(s)); } catch { /* best effort */ }
+}
+
+// JSON with object keys sorted at every level; arrays keep their order.
+// verify.py in the internal repo mirrors this exactly.
+export function stableStringify(v) {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
+}
+
+export async function checksum(payload) {
+  const bytes = new TextEncoder().encode(stableStringify(payload) + REV);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
+
+// The response as JSON if it parses, with a surrounding ``` fence
+// tolerated; null otherwise.
+function parseJsonLoose(text) {
+  let s = (text || '').trim();
+  const fence = s.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
+  if (fence) s = fence[1].trim();
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+// Puts a parsed answer into a form where cosmetic differences vanish:
+// keys lowercased and stripped to alphanumerics, strings trimmed and
+// lowercased, numeric strings (with an optional $) read as numbers,
+// arrays sorted. Two answers match when their normal forms are equal.
+function normalize(v) {
+  if (Array.isArray(v)) return v.map(normalize).sort((a, b) => (stableStringify(a) < stableStringify(b) ? -1 : 1));
+  if (v && typeof v === 'object') {
+    const out = {};
+    for (const k of Object.keys(v)) out[k.toLowerCase().replace(/[^a-z0-9]/g, '')] = normalize(v[k]);
+    return out;
+  }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    const num = s.match(/^\$?\s*(-?\d+(?:\.\d+)?)$/);
+    return num ? Number(num[1]) : s.toLowerCase();
+  }
+  return v;
+}
+
+export function matches(answer, expected) {
+  if (answer == null || expected == null) return false;
+  return stableStringify(normalize(answer)) === stableStringify(normalize(expected));
+}
+
 function insertAtCursor(el, text) {
   el.focus();
   const ok = document.execCommand && document.execCommand('insertText', false, text);
@@ -270,7 +342,7 @@ const TEMPLATE = `
 `;
 
 export function mount(data) {
-  const { title = '', subtitle = '', messages = [], dataBlocks = [] } = data;
+  const { title = '', subtitle = '', messages = [], dataBlocks = [], expected = null } = data;
 
   const root = document.querySelector('#app');
   root.classList.add('text2json');
@@ -353,6 +425,16 @@ export function mount(data) {
     return { expanded: result, errors };
   }
 
+  // ---------- session log ----------
+  const act = slugify(title || 'challenge');
+  const storeKey = `t2j:${act}`;
+  const session = loadSession(storeKey) || { sid: randomId(), t0: Date.now(), log: [] };
+
+  function logEvent(e) {
+    session.log.push({ t: Date.now(), ...e });
+    saveSession(storeKey, session);
+  }
+
   // ---------- response + download ----------
   const responsePane = root.querySelector('.response-pane');
   const downloadBtn = root.querySelector('.download');
@@ -369,35 +451,43 @@ export function mount(data) {
       return;
     }
     await navigator.clipboard.writeText(expanded);
+    logEvent({ k: '2llm', p: expanded });
   };
 
   root.querySelector('.paste-response').onclick = async () => {
     try {
       const text = await navigator.clipboard.readText();
       setResponse(text || '(clipboard was empty)', !!text);
+      if (text) logEvent({ k: 'llm2', r: text });
     } catch (e) {
       alert('Could not read the clipboard: ' + e.message);
     }
   };
 
-  downloadBtn.onclick = () => {
+  downloadBtn.onclick = async () => {
     const { expanded, errors } = parseAndExpand(composer.value);
     if (errors.length) {
       alert('Cannot download — fix these first:\n\n' + errors.map((e) => '• ' + e).join('\n'));
       return;
     }
+    const response = responsePane.textContent;
+    const j = parseJsonLoose(response);
     const payload = {
-      title,
-      subtitle,
-      prompt: expanded,
-      response: responsePane.textContent,
-      downloadedAt: new Date().toISOString(),
+      v: 1,
+      act,
+      out: { match: matches(j, expected), j, r: response, p: expanded },
+      log: session.log,
+      hdr: { t: title, s: subtitle },
+      sid: session.sid,
+      t0: session.t0,
+      tN: Date.now(),
     };
+    payload.chk = await checksum(payload);
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${slugify(title || 'challenge')}-result.json`;
+    a.download = `${act}-result.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
