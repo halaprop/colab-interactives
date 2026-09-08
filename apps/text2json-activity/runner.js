@@ -164,6 +164,7 @@ const STYLE = `
   .text2json textarea.composer {
     width: 100%;
     min-height: 160px;
+    margin-top: 8px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 13px;
     padding: 8px;
