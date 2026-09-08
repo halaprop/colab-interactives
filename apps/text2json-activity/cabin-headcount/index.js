@@ -1,0 +1,38 @@
+import { mount } from '../runner.js';
+
+mount({
+  title: 'Cabin Headcount',
+  subtitle: 'Noor paid the $600 deposit. From the thread, work out who is actually confirmed for the cabin and what each person owes her.',
+  messages: [
+    { name: 'Noor', id: 'u1', message: 'ok cabin is booked!! oct 16-18. I put down the $600 deposit, need a headcount by friday and then everyone can pay me back their share' },
+    { name: 'Dev', id: 'u2', message: 'YES. in.' },
+    { name: 'Tasha', id: 'u3', message: 'in!! can I bring Jules?' },
+    { name: 'Noor', id: 'u1', message: 'of course' },
+    { name: 'Marco', id: 'u4', message: '16th is that the friday?' },
+    { name: 'Noor', id: 'u1', message: 'yeah fri to sun' },
+    { name: 'Marco', id: 'u4', message: "ok I'm in" },
+    { name: 'Priya', id: 'u5', message: 'ugh I want to, I have a thing sat morning. maybe? will know thursday' },
+    { name: 'Ben', id: 'u6', message: "I'm in. also is there a hot tub" },
+    { name: 'Noor', id: 'u1', message: "there's a hot tub" },
+    { name: 'Ben', id: 'u6', message: 'ok double in' },
+    { name: 'Kai', id: 'u7', message: 'count me in. can I bring Biscuit' },
+    { name: 'Noor', id: 'u1', message: "the dog?? there's a pet fee, let me check" },
+    { name: 'Dev', id: 'u2', message: "wait is this the weekend of Sofia's wedding" },
+    { name: 'Tasha', id: 'u3', message: "no that's the 23rd" },
+    { name: 'Dev', id: 'u2', message: 'ok phew' },
+    { name: 'Kai', id: 'u7', message: 'nvm on Biscuit, my sister can take him' },
+    { name: 'Marco', id: 'u4', message: "actually I just realized I have to be back sunday early, can I just come sat for the day and drive home? don't need a bed" },
+    { name: 'Noor', id: 'u1', message: 'sure, totally' },
+    { name: 'Ben', id: 'u6', message: "I sent you $100 on venmo toward the deposit btw, figured I'd get ahead of it" },
+    { name: 'Noor', id: 'u1', message: 'got it thx' },
+    { name: 'Tasha', id: 'u3', message: 'Jules says thanks for having them' },
+    { name: 'Dev', id: 'u2', message: "hm. actually. I don't think I can swing it, work is a mess. sorry :( next time" },
+    { name: 'Noor', id: 'u1', message: 'nooo ok' },
+    { name: 'Kai', id: 'u7', message: 'also my cousin might come? idk yet' },
+    { name: 'Priya', id: 'u5', message: "it's thursday and I still don't know lol" },
+    { name: 'Noor', id: 'u1', message: "ok I'm gonna lock it in tomorrow, whoever's confirmed is confirmed" },
+  ],
+  dataBlocks: [
+    { label: 'reservation', content: 'Pinecrest Cabin #4\nFri Oct 16 - Sun Oct 18 (2 nights)\nSleeps 8\nDeposit paid: $600 (Noor)\nBalance $900 due at check-in' },
+  ],
+});
