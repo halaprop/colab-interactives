@@ -76,7 +76,9 @@ const STYLE = `
     --ink-muted: #898781;
     --accent: #a5462f;
     --accent-ink: #ffffff;
-    --bubble: #eef0f3;
+    --bubble: #0b93f6;
+    --bubble-ink: #ffffff;
+    --go: #2fa84f;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -100,7 +102,7 @@ const STYLE = `
       --ink-muted: #898781;
       --accent: #d97a5e;
       --accent-ink: #1a1a19;
-      --bubble: #2c2e31;
+      --bubble: #1a8cf0;
     }
   }
   .text2json .header h1 { margin: 0 0 4px; font-size: 20px; }
@@ -122,13 +124,38 @@ const STYLE = `
   .text2json .chat-msg { display: flex; flex-direction: column; gap: 2px; }
   .text2json .chat-name { font-size: 11px; font-weight: 700; }
   .text2json .chat-bubble {
+    position: relative;
     background: var(--bubble);
-    border-radius: 10px;
-    padding: 6px 10px;
+    color: var(--bubble-ink);
+    border-radius: 16px;
+    padding: 7px 12px;
+    margin-left: 6px;
     max-width: 85%;
     align-self: flex-start;
     font-size: 13px;
     white-space: pre-wrap;
+  }
+  /* Tail: a bubble-colored blob at the bottom-left corner, with a
+     panel-colored blob over its outer half leaving a curved point. */
+  .text2json .chat-bubble::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -7px;
+    width: 20px;
+    height: 18px;
+    background: var(--bubble);
+    border-bottom-right-radius: 15px;
+  }
+  .text2json .chat-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -10px;
+    width: 10px;
+    height: 18px;
+    background: var(--panel);
+    border-bottom-right-radius: 10px;
   }
   .text2json .data-preview-item { margin-bottom: 10px; }
   .text2json .data-preview-item:last-child { margin-bottom: 0; }
@@ -197,6 +224,7 @@ const STYLE = `
     color: var(--ink-primary);
   }
   .text2json button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .text2json button.btn.download { background: var(--go); color: #ffffff; border-color: var(--go); }
   .text2json button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 </style>
 `;
