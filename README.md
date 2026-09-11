@@ -74,6 +74,30 @@ shim.show(app='hello')
 
 The cell renders "Hello, World!".
 
+## Python apps
+
+The same one-line idea for Python. `pyapps/<name>/main.py`:
+
+```python
+def main(name='World'):
+    print(f'Hello, {name}!')
+```
+
+In a cell, after the bootstrap cell:
+
+```python
+shim.show('hello')             # Hello, World!
+shim.show('hello', name='Dan') # alternative, with keyword args that go to main()
+```
+
+Same `show()` as for JS apps: it looks for `pyapps/<name>/main.py`
+first, then `apps/<name>/index.js`. For a Python app it fetches the file
+at the current `REF`, executes it as a module, calls `main(**kw)` if the
+file defines one, and returns the module; print and display output land
+in the cell. `height=` only applies to JS apps. Third-party packages the
+app needs and Colab lacks are a `!pip install` cell in the notebook, not
+something `show()` hides.
+
 ## Running an app locally
 
 `harness/index.html` builds the same page `shim.py` does -- an `#app`
@@ -101,6 +125,8 @@ on `#app` renders fine here and collapses to ~150px in Colab.
 
 - `apps/<name>/index.js` -- one app per folder; nested paths (e.g.
   `apps/tictactoe/idea0/`) are fine.
+- `pyapps/<name>/main.py` -- one Python app per folder, same
+  `shim.show('<name>')` as the JS apps.
 - `lib/` -- shared code imported by more than one app: `diagram.js` (the
   D3 diagram library, documented in `lib/Diagram-API.md`), `tictactoe.js`
   (board and rules for the `tictactoe/idea*` series), `hello.js`.

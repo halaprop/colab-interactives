@@ -1,5 +1,7 @@
 import json
+import sys
 import time
+import types
 import urllib.error
 import urllib.request
 from IPython.display import HTML, display
@@ -42,7 +44,44 @@ def resolve_ref(ref):
     return sha
 
 
-def show(app, ref=None, height=650):
+def _exists(url):
+    try:
+        _fetch(url, method='HEAD')
+        return True
+    except urllib.error.HTTPError:
+        return False
+
+
+def show(app, ref=None, height=650, **kw):
+    # an app is either pyapps/<app>/main.py (Python, run in the kernel;
+    # kw go to its main()) or apps/<app>/index.js (JS, shown in an iframe
+    # of the given height). Python is looked for first. Both HEAD-checked
+    # so a typo'd name is a loud Python exception naming the exact paths.
+    base = f'https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{resolve_ref(ref or REF)}'
+    py_entry, js_entry = f'pyapps/{app}/main.py', f'apps/{app}/index.js'
+    if _exists(f'{base}/{py_entry}'):
+        return _run_py(f'{base}/{py_entry}', app, kw)
+    if _exists(f'{base}/{js_entry}'):
+        return _show_js(f'{base}/{js_entry}', js_entry, height)
+    raise FileNotFoundError(f'no {py_entry} or {js_entry} under {base}')
+
+
+def _run_py(src, app, kw):
+    # executes the file as a module, calls its main(**kw) if it defines
+    # one, returns the module. Print and display output land in the cell
+    # like ordinary Python.
+    code = _fetch(src).read().decode('utf-8')
+    name = 'pyapps.' + app.replace('/', '.')
+    mod = types.ModuleType(name)
+    mod.__file__ = src
+    sys.modules[name] = mod
+    exec(compile(code, src, 'exec'), mod.__dict__)
+    if callable(getattr(mod, 'main', None)):
+        mod.main(**kw)
+    return mod
+
+
+def _show_js(src, entry, height):
     # a bare number is shorthand for pixels (unchanged default behavior);
     # a string is passed straight through as a CSS height, e.g. '50vh' or
     # 'auto' -- confirmed against real Colab output that content sizing
@@ -50,20 +89,10 @@ def show(app, ref=None, height=650):
     # area correctly, no special API needed.
     height_css = f'{height}px' if isinstance(height, (int, float)) else str(height)
 
-    base = f'https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{resolve_ref(ref or REF)}'
-    entry = f'apps/{app}/index.js'
-    src = f'{base}/{entry}'
-
-    try:
-        _fetch(src, method='HEAD')
-    except urllib.error.HTTPError as e:
-        raise FileNotFoundError(f'{entry} -> HTTP {e.code} ({src})') from None
-
-    # entry itself is checked above (a typo'd app name is the common
-    # mistake, and this makes it a loud Python exception). A missing
-    # dependency pulled in by entry's own imports can't be preflighted the
-    # same way -- would mean reimplementing module resolution in Python --
-    # so that case is left to the browser: .onerror and console.error
+    # entry itself is checked by show(). A missing dependency pulled in by
+    # entry's own imports can't be preflighted the same way -- would mean
+    # reimplementing module resolution in Python -- so that case is left
+    # to the browser: .onerror and console.error
     # below both name the exact URL, though Colab's output iframe may
     # restrict enough (inline event-handler attributes, modals) that
     # neither is guaranteed to surface. Built as a real <script> block
